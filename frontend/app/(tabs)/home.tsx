@@ -519,4 +519,14 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#8B8B8B',
+  },
 });
