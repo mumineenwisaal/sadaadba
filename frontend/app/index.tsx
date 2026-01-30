@@ -12,12 +12,16 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const init = async () => {
-      await initializeApp();
-      // Show splash for at least 2 seconds
+      try {
+        await initializeApp();
+      } catch (error) {
+        console.error('Init error:', error);
+      }
+      // Show splash for at least 2 seconds then navigate
       setTimeout(() => {
         setShowSplash(false);
         router.replace('/(tabs)/home');
-      }, 2000);
+      }, 2500);
     };
     init();
   }, []);
