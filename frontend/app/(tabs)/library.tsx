@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,20 @@ export default function LibraryScreen() {
     instrumentals,
     isSubscribed,
     setCurrentTrack,
+    initializeApp,
   } = useAppStore();
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      if (instrumentals.length === 0) {
+        await initializeApp();
+      }
+      setIsLoading(false);
+    };
+    load();
+  }, []);
 
   const handleTrackPress = (track: Instrumental) => {
     if (track.is_premium && !isSubscribed) {
