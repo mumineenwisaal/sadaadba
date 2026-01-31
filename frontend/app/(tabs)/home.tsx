@@ -33,6 +33,8 @@ export default function HomeScreen() {
     fetchFeaturedInstrumentals,
     isLoading,
     initializeApp,
+    playTrack,
+    isTrackDownloaded,
   } = useAppStore();
 
   const [refreshing, setRefreshing] = useState(false);
