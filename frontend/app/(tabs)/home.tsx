@@ -500,6 +500,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  downloadedBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   trackInfo: {
     padding: 10,
   },
