@@ -166,7 +166,10 @@ export default function HomeScreen() {
     </ScrollView>
   );
 
-  const renderTrackCard = (track: Instrumental, index: number) => (
+  const renderTrackCard = (track: Instrumental, index: number) => {
+    const downloaded = isTrackDownloaded(track.id);
+    
+    return (
     <TouchableOpacity
       key={track.id}
       style={styles.trackCard}
@@ -185,6 +188,11 @@ export default function HomeScreen() {
             <Ionicons name="lock-closed" size={12} color="#C9A961" />
           </View>
         )}
+        {downloaded && (
+          <View style={styles.downloadedBadge}>
+            <Ionicons name="cloud-done" size={12} color="#4CAF50" />
+          </View>
+        )}
       </LinearGradient>
       <View style={styles.trackInfo}>
         <Text style={styles.trackTitle} numberOfLines={1}>
@@ -198,7 +206,8 @@ export default function HomeScreen() {
         </View>
       </View>
     </TouchableOpacity>
-  );
+  )};
+
 
   const renderSection = (title: string, tracks: Instrumental[], showPremiumBadge?: boolean) => {
     if (tracks.length === 0) return null;
