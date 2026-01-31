@@ -410,7 +410,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  // Favorites
   fetchFavorites: async () => {
     const { user } = get();
     if (!user) return;
