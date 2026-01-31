@@ -22,6 +22,95 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/appStore';
 
 const { width, height } = Dimensions.get('window');
+const SEEKBAR_WIDTH = width - 80;
+
+// Custom SeekBar component
+const SeekBar = ({ 
+  progress, 
+  duration, 
+  onSeek 
+}: { 
+  progress: number; 
+  duration: number; 
+  onSeek: (position: number) => void;
+}) => {
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPosition, setSeekPosition] = useState(0);
+  
+  const progressPercent = duration > 0 ? (isSeeking ? seekPosition : progress) / duration : 0;
+  
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    setIsSeeking(true);
+    const x = e.nativeEvent.locationX;
+    const newPosition = Math.max(0, Math.min((x / SEEKBAR_WIDTH) * duration, duration));
+    setSeekPosition(newPosition);
+  };
+  
+  const handleTouchMove = (e: GestureResponderEvent) => {
+    if (isSeeking) {
+      const x = e.nativeEvent.locationX;
+      const newPosition = Math.max(0, Math.min((x / SEEKBAR_WIDTH) * duration, duration));
+      setSeekPosition(newPosition);
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    if (isSeeking) {
+      onSeek(seekPosition);
+      setIsSeeking(false);
+    }
+  };
+
+  return (
+    <View 
+      style={seekStyles.container}
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderGrant={handleTouchStart}
+      onResponderMove={handleTouchMove}
+      onResponderRelease={handleTouchEnd}
+      onResponderTerminate={handleTouchEnd}
+    >
+      <View style={seekStyles.track}>
+        <View style={[seekStyles.fill, { width: `${progressPercent * 100}%` }]} />
+      </View>
+      <View style={[seekStyles.thumb, { left: `${progressPercent * 100}%` }]} />
+    </View>
+  );
+};
+
+const seekStyles = StyleSheet.create({
+  container: {
+    height: 30,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  track: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    backgroundColor: '#C9A961',
+    borderRadius: 3,
+  },
+  thumb: {
+    position: 'absolute',
+    top: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#C9A961',
+    marginLeft: -7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+});
 
 // Animated waveform component
 const AnimatedWaveform = ({ isPlaying }: { isPlaying: boolean }) => {
