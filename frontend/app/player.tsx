@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,16 @@ import {
   Animated,
   ActivityIndicator,
   Platform,
+  Modal,
+  FlatList,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/appStore';
-import Slider from '@react-native-community/slider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,9 +60,7 @@ const AnimatedWaveform = ({ isPlaying }: { isPlaying: boolean }) => {
           key={index}
           style={[
             waveStyles.bar,
-            {
-              transform: [{ scaleY: animations[index] }],
-            },
+            { transform: [{ scaleY: animations[index] }] },
           ]}
         />
       ))}
@@ -73,7 +74,7 @@ const waveStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 60,
-    marginVertical: 24,
+    marginVertical: 20,
   },
   bar: {
     width: 4,
@@ -93,42 +94,35 @@ export default function PlayerScreen() {
     playbackPosition,
     playbackDuration,
     isBuffering,
-    playTrack,
     pauseTrack,
     resumeTrack,
     seekTo,
     playNext,
     playPrevious,
-    isSubscribed,
+    isLoopEnabled,
+    isShuffleEnabled,
+    toggleLoop,
+    toggleShuffle,
     downloadTrack,
     deleteDownload,
     isTrackDownloaded,
     downloads,
+    toggleFavorite,
+    isFavorite,
+    playlists,
+    addToPlaylist,
+    createPlaylist,
   } = useAppStore();
 
-  const [isDownloading, setIsDownloading] = React.useState(false);
-  const [downloadProgress, setDownloadProgress] = React.useState(0);
-
-  useEffect(() => {
-    if (currentTrack) {
-      const downloadStatus = downloads[currentTrack.id];
-      if (downloadStatus) {
-        setIsDownloading(downloadStatus.isDownloading);
-        setDownloadProgress(downloadStatus.progress);
-      } else {
-        setIsDownloading(false);
-        setDownloadProgress(0);
-      }
-    }
-  }, [downloads, currentTrack]);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
 
   const handlePlayPause = async () => {
     if (isPlaying) {
       await pauseTrack();
     } else {
-      if (currentTrack) {
-        await resumeTrack();
-      }
+      await resumeTrack();
     }
   };
 
@@ -140,13 +134,38 @@ export default function PlayerScreen() {
     if (!currentTrack) return;
     
     if (isTrackDownloaded(currentTrack.id)) {
-      // Delete download
       await deleteDownload(currentTrack.id);
     } else {
-      // Download track
-      setIsDownloading(true);
       await downloadTrack(currentTrack);
-      setIsDownloading(false);
+    }
+  };
+
+  const handleFavorite = () => {
+    if (currentTrack) {
+      toggleFavorite(currentTrack.id);
+    }
+  };
+
+  const handleAddToPlaylist = async (playlistId: string) => {
+    if (currentTrack) {
+      const success = await addToPlaylist(playlistId, currentTrack.id);
+      if (success) {
+        Alert.alert('Added', 'Track added to playlist');
+      }
+    }
+    setShowPlaylistModal(false);
+  };
+
+  const handleCreatePlaylist = async () => {
+    if (newPlaylistName.trim()) {
+      const playlist = await createPlaylist(newPlaylistName.trim());
+      if (playlist && currentTrack) {
+        await addToPlaylist(playlist.id, currentTrack.id);
+        Alert.alert('Created', 'Playlist created and track added');
+      }
+      setNewPlaylistName('');
+      setShowCreatePlaylist(false);
+      setShowPlaylistModal(false);
     }
   };
 
@@ -166,6 +185,9 @@ export default function PlayerScreen() {
   }
 
   const downloaded = isTrackDownloaded(currentTrack.id);
+  const isFav = isFavorite(currentTrack.id);
+  const isDownloading = downloads[currentTrack.id]?.isDownloading;
+  const progress = playbackDuration > 0 ? playbackPosition / playbackDuration : 0;
 
   return (
     <LinearGradient
@@ -176,33 +198,16 @@ export default function PlayerScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
           <Ionicons name="chevron-down" size={28} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Now Playing</Text>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={handleDownload}
-          disabled={isDownloading}
-        >
-          {isDownloading ? (
-            <View style={styles.downloadProgress}>
-              <ActivityIndicator size="small" color="#C9A961" />
-            </View>
-          ) : (
-            <Ionicons 
-              name={downloaded ? "cloud-done" : "cloud-download-outline"} 
-              size={24} 
-              color={downloaded ? "#C9A961" : "#FFFFFF"} 
-            />
-          )}
+        <TouchableOpacity style={styles.headerButton} onPress={() => setShowPlaylistModal(true)}>
+          <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {/* Album Art / Waveform */}
+      {/* Album Art */}
       <View style={styles.artContainer}>
         <LinearGradient
           colors={[currentTrack.thumbnail_color, '#2D1F3D']}
@@ -227,12 +232,6 @@ export default function PlayerScreen() {
           <View style={styles.moodTag}>
             <Text style={styles.moodTagText}>{currentTrack.mood}</Text>
           </View>
-          {currentTrack.is_premium && (
-            <View style={styles.premiumTag}>
-              <Ionicons name="diamond" size={12} color="#C9A961" />
-              <Text style={styles.premiumTagText}>Premium</Text>
-            </View>
-          )}
           {downloaded && (
             <View style={styles.downloadedTag}>
               <Ionicons name="cloud-done" size={12} color="#4CAF50" />
@@ -244,39 +243,66 @@ export default function PlayerScreen() {
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        {Platform.OS === 'web' ? (
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${playbackDuration > 0 ? (playbackPosition / playbackDuration) * 100 : 0}%` }
-              ]} 
-            />
-          </View>
-        ) : (
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={playbackDuration}
-            value={playbackPosition}
-            onSlidingComplete={handleSeek}
-            minimumTrackTintColor="#C9A961"
-            maximumTrackTintColor="rgba(255, 255, 255, 0.2)"
-            thumbTintColor="#C9A961"
-          />
-        )}
+        <TouchableOpacity 
+          style={styles.progressBar}
+          onPress={(e) => {
+            const x = e.nativeEvent.locationX;
+            const barWidth = width - 80;
+            const newPosition = (x / barWidth) * playbackDuration;
+            handleSeek(Math.max(0, Math.min(newPosition, playbackDuration)));
+          }}
+        >
+          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
+        </TouchableOpacity>
         <View style={styles.timeContainer}>
           <Text style={styles.timeText}>{formatTime(playbackPosition)}</Text>
           <Text style={styles.timeText}>{formatTime(playbackDuration)}</Text>
         </View>
       </View>
 
-      {/* Controls */}
+      {/* Secondary Controls */}
+      <View style={styles.secondaryControls}>
+        <TouchableOpacity style={styles.controlButton} onPress={toggleShuffle}>
+          <Ionicons 
+            name="shuffle" 
+            size={22} 
+            color={isShuffleEnabled ? "#C9A961" : "rgba(255, 255, 255, 0.5)"} 
+          />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.controlButton} onPress={handleFavorite}>
+          <Ionicons 
+            name={isFav ? "heart" : "heart-outline"} 
+            size={24} 
+            color={isFav ? "#E91E63" : "rgba(255, 255, 255, 0.5)"} 
+          />
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.controlButton} onPress={handleDownload} disabled={isDownloading}>
+          {isDownloading ? (
+            <ActivityIndicator size="small" color="#C9A961" />
+          ) : (
+            <Ionicons 
+              name={downloaded ? "cloud-done" : "cloud-download-outline"} 
+              size={22} 
+              color={downloaded ? "#4CAF50" : "rgba(255, 255, 255, 0.5)"} 
+            />
+          )}
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.controlButton} onPress={toggleLoop}>
+          <Ionicons 
+            name="repeat" 
+            size={22} 
+            color={isLoopEnabled ? "#C9A961" : "rgba(255, 255, 255, 0.5)"} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={playPrevious}
-        >
+        <TouchableOpacity style={styles.skipButton} onPress={playPrevious}>
           <Ionicons name="play-skip-back" size={28} color="#FFFFFF" />
         </TouchableOpacity>
 
@@ -289,27 +315,96 @@ export default function PlayerScreen() {
           {isBuffering ? (
             <ActivityIndicator size="large" color="#4A3463" />
           ) : (
-            <Ionicons
-              name={isPlaying ? 'pause' : 'play'}
-              size={36}
-              color="#4A3463"
-            />
+            <Ionicons name={isPlaying ? 'pause' : 'play'} size={36} color="#4A3463" />
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={playNext}
-        >
+        <TouchableOpacity style={styles.skipButton} onPress={playNext}>
           <Ionicons name="play-skip-forward" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {/* Additional Info */}
+      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Sadaa Instrumentals</Text>
-        <Text style={styles.footerSubtext}>Dawoodi Bohra Madeh Music</Text>
       </View>
+
+      {/* Add to Playlist Modal */}
+      <Modal
+        visible={showPlaylistModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPlaylistModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add to Playlist</Text>
+              <TouchableOpacity onPress={() => setShowPlaylistModal(false)}>
+                <Ionicons name="close" size={24} color="#2D2D2D" />
+              </TouchableOpacity>
+            </View>
+
+            {showCreatePlaylist ? (
+              <View style={styles.createPlaylistForm}>
+                <TextInput
+                  style={styles.playlistInput}
+                  placeholder="Playlist name"
+                  value={newPlaylistName}
+                  onChangeText={setNewPlaylistName}
+                  autoFocus
+                />
+                <View style={styles.createPlaylistButtons}>
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => setShowCreatePlaylist(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.createButton}
+                    onPress={handleCreatePlaylist}
+                  >
+                    <Text style={styles.createButtonText}>Create</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.createPlaylistOption}
+                  onPress={() => setShowCreatePlaylist(true)}
+                >
+                  <Ionicons name="add-circle" size={24} color="#4A3463" />
+                  <Text style={styles.createPlaylistText}>Create New Playlist</Text>
+                </TouchableOpacity>
+
+                <FlatList
+                  data={playlists}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.playlistOption}
+                      onPress={() => handleAddToPlaylist(item.id)}
+                    >
+                      <View style={[styles.playlistIcon, { backgroundColor: item.cover_color }]}>
+                        <Ionicons name="musical-notes" size={16} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.playlistInfo}>
+                        <Text style={styles.playlistName}>{item.name}</Text>
+                        <Text style={styles.playlistCount}>{item.track_ids.length} tracks</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={
+                    <Text style={styles.emptyText}>No playlists yet</Text>
+                  }
+                />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -329,7 +424,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   headerButton: {
     width: 40,
@@ -342,22 +437,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.7)',
   },
-  downloadProgress: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   artContainer: {
     alignItems: 'center',
     paddingHorizontal: 40,
-    marginTop: 20,
+    marginTop: 10,
   },
   artGradient: {
-    width: width - 100,
-    height: width - 100,
-    maxWidth: 280,
-    maxHeight: 280,
+    width: width - 120,
+    height: width - 120,
+    maxWidth: 260,
+    maxHeight: 260,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -370,10 +459,10 @@ const styles = StyleSheet.create({
   trackInfo: {
     alignItems: 'center',
     paddingHorizontal: 40,
-    marginTop: 24,
+    marginTop: 16,
   },
   trackTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
@@ -381,15 +470,13 @@ const styles = StyleSheet.create({
   trackMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
     gap: 10,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
   },
   moodTag: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 12,
   },
   moodTagText: {
@@ -397,26 +484,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  premiumTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(201, 169, 97, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  premiumTagText: {
-    color: '#C9A961',
-    fontSize: 13,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
   downloadedTag: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 12,
   },
   downloadedTagText: {
@@ -427,22 +500,27 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: 40,
-    marginTop: 32,
+    marginTop: 24,
   },
   progressBar: {
-    height: 4,
+    height: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
-    overflow: 'hidden',
+    borderRadius: 3,
+    position: 'relative',
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#C9A961',
-    borderRadius: 2,
+    borderRadius: 3,
   },
-  slider: {
-    width: '100%',
-    height: 40,
+  progressThumb: {
+    position: 'absolute',
+    top: -4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#C9A961',
+    marginLeft: -7,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -453,14 +531,27 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
   },
+  secondaryControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 28,
+  },
+  controlButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 32,
-    gap: 32,
+    marginTop: 16,
+    gap: 28,
   },
-  secondaryButton: {
+  skipButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -469,9 +560,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: '#C9A961',
     justifyContent: 'center',
     alignItems: 'center',
@@ -483,19 +574,118 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 30,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   footerText: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.3)',
+    fontSize: 12,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FAF8F5',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D2D2D',
+  },
+  createPlaylistOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(74, 52, 99, 0.1)',
+  },
+  createPlaylistText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4A3463',
+    marginLeft: 12,
+  },
+  playlistOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  playlistIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playlistInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  playlistName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  playlistCount: {
+    fontSize: 12,
+    color: '#8B8B8B',
+    marginTop: 2,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#8B8B8B',
+    paddingVertical: 20,
+  },
+  createPlaylistForm: {
+    paddingVertical: 10,
+  },
+  playlistInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 52, 99, 0.2)',
+  },
+  createPlaylistButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+    gap: 12,
+  },
+  cancelButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  cancelButtonText: {
+    color: '#8B8B8B',
+    fontSize: 15,
     fontWeight: '500',
   },
-  footerSubtext: {
-    color: 'rgba(255, 255, 255, 0.25)',
-    fontSize: 12,
-    marginTop: 4,
+  createButton: {
+    backgroundColor: '#4A3463',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
