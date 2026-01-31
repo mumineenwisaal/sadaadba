@@ -27,8 +27,7 @@ export default function MiniPlayer() {
     pauseTrack,
     resumeTrack,
     playNext,
-    setCurrentTrack,
-    sound,
+    stopPlayback,
   } = useAppStore();
 
   // Don't show mini player on player screen or if no track
@@ -51,17 +50,7 @@ export default function MiniPlayer() {
   };
 
   const handleClose = async () => {
-    // Stop and unload audio
-    if (sound) {
-      try {
-        await sound.stopAsync();
-        await sound.unloadAsync();
-      } catch (e) {
-        console.log('Error stopping sound:', e);
-      }
-    }
-    // Clear current track
-    setCurrentTrack(null);
+    await stopPlayback();
   };
 
   // Calculate bottom position based on tab bar height
