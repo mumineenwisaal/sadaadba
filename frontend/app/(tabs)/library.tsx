@@ -4,15 +4,18 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  FlatList,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppStore, Instrumental } from '../../store/appStore';
+import { useAppStore, Instrumental, Playlist } from '../../store/appStore';
 
 export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
@@ -20,14 +23,23 @@ export default function LibraryScreen() {
   const {
     instrumentals,
     isSubscribed,
-    setCurrentTrack,
     initializeApp,
     playTrack,
-    isTrackDownloaded,
+    favorites,
+    playlists,
+    fetchPlaylists,
+    createPlaylist,
+    deletePlaylist,
+    getPlaylistTracks,
     downloadedTracks,
   } = useAppStore();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'favorites' | 'playlists' | 'downloads'>('favorites');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [playlistTracks, setPlaylistTracks] = useState<Instrumental[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -48,19 +60,43 @@ export default function LibraryScreen() {
     }
   };
 
-  // Get all instrumentals accessible to user
-  const accessibleTracks = isSubscribed 
-    ? instrumentals 
-    : instrumentals.filter(i => !i.is_premium);
+  const handlePlaylistPress = async (playlist: Playlist) => {
+    const tracks = await getPlaylistTracks(playlist.id);
+    setPlaylistTracks(tracks);
+    setSelectedPlaylist(playlist);
+  };
 
-  // Group by mood
-  const moodGroups = accessibleTracks.reduce((acc, track) => {
-    if (!acc[track.mood]) {
-      acc[track.mood] = [];
+  const handleCreatePlaylist = async () => {
+    if (newPlaylistName.trim()) {
+      await createPlaylist(newPlaylistName.trim());
+      setNewPlaylistName('');
+      setShowCreateModal(false);
     }
-    acc[track.mood].push(track);
-    return acc;
-  }, {} as Record<string, Instrumental[]>);
+  };
+
+  const handleDeletePlaylist = (playlistId: string, name: string) => {
+    Alert.alert(
+      'Delete Playlist',
+      `Are you sure you want to delete "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deletePlaylist(playlistId)
+        }
+      ]
+    );
+  };
+
+  const handlePlayAll = async (tracks: Instrumental[]) => {
+    if (tracks.length > 0) {
+      await playTrack(tracks[0], tracks);
+      router.push('/player');
+    }
+  };
+
+  const downloadedTracksList = instrumentals.filter(i => downloadedTracks[i.id]);
 
   const renderTrackRow = (track: Instrumental) => (
     <TouchableOpacity
@@ -78,24 +114,62 @@ export default function LibraryScreen() {
         <Ionicons name="musical-note" size={18} color="rgba(255, 255, 255, 0.5)" />
       </LinearGradient>
       <View style={styles.trackInfo}>
-        <Text style={styles.trackTitle} numberOfLines={1}>
-          {track.title}
-        </Text>
-        <Text style={styles.trackDuration}>{track.duration_formatted}</Text>
+        <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
+        <Text style={styles.trackMeta}>{track.mood} • {track.duration_formatted}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#8B8B8B" />
+      <Ionicons name="play" size={20} color="#4A3463" />
     </TouchableOpacity>
   );
 
-  const renderMoodSection = (mood: string, tracks: Instrumental[]) => (
-    <View key={mood} style={styles.moodSection}>
-      <View style={styles.moodHeader}>
-        <Text style={styles.moodTitle}>{mood}</Text>
-        <Text style={styles.trackCount}>{tracks.length} tracks</Text>
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color="#4A3463" />
       </View>
-      {tracks.map(renderTrackRow)}
-    </View>
-  );
+    );
+  }
+
+  // Playlist Detail View
+  if (selectedPlaylist) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.playlistHeader}>
+          <TouchableOpacity onPress={() => setSelectedPlaylist(null)}>
+            <Ionicons name="arrow-back" size={24} color="#2D2D2D" />
+          </TouchableOpacity>
+          <Text style={styles.playlistTitle}>{selectedPlaylist.name}</Text>
+          <TouchableOpacity onPress={() => handleDeletePlaylist(selectedPlaylist.id, selectedPlaylist.name)}>
+            <Ionicons name="trash-outline" size={22} color="#E91E63" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.playlistStats}>
+          <Text style={styles.playlistCount}>{playlistTracks.length} tracks</Text>
+          {playlistTracks.length > 0 && (
+            <TouchableOpacity 
+              style={styles.playAllButton}
+              onPress={() => handlePlayAll(playlistTracks)}
+            >
+              <Ionicons name="play" size={16} color="#FFFFFF" />
+              <Text style={styles.playAllText}>Play All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView style={styles.tracksList}>
+          {playlistTracks.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="musical-notes-outline" size={48} color="#8B8B8B" />
+              <Text style={styles.emptyText}>No tracks in this playlist</Text>
+              <Text style={styles.emptySubtext}>Add tracks from the player screen</Text>
+            </View>
+          ) : (
+            playlistTracks.map(renderTrackRow)
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -112,59 +186,182 @@ export default function LibraryScreen() {
         )}
       </View>
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{accessibleTracks.length}</Text>
-          <Text style={styles.statLabel}>Available</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{Object.keys(moodGroups).length}</Text>
-          <Text style={styles.statLabel}>Moods</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {isSubscribed ? 'Premium' : 'Free'}
+      {/* Tabs */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'favorites' && styles.activeTab]}
+          onPress={() => setActiveTab('favorites')}
+        >
+          <Ionicons 
+            name="heart" 
+            size={18} 
+            color={activeTab === 'favorites' ? '#4A3463' : '#8B8B8B'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'favorites' && styles.activeTabText]}>
+            Favorites
           </Text>
-          <Text style={styles.statLabel}>Plan</Text>
-        </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'playlists' && styles.activeTab]}
+          onPress={() => setActiveTab('playlists')}
+        >
+          <Ionicons 
+            name="list" 
+            size={18} 
+            color={activeTab === 'playlists' ? '#4A3463' : '#8B8B8B'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'playlists' && styles.activeTabText]}>
+            Playlists
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'downloads' && styles.activeTab]}
+          onPress={() => setActiveTab('downloads')}
+        >
+          <Ionicons 
+            name="cloud-done" 
+            size={18} 
+            color={activeTab === 'downloads' ? '#4A3463' : '#8B8B8B'} 
+          />
+          <Text style={[styles.tabText, activeTab === 'downloads' && styles.activeTabText]}>
+            Downloads
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {Object.entries(moodGroups).map(([mood, tracks]) =>
-          renderMoodSection(mood, tracks)
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Favorites Tab */}
+        {activeTab === 'favorites' && (
+          <View>
+            {favorites.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="heart-outline" size={48} color="#8B8B8B" />
+                <Text style={styles.emptyText}>No favorites yet</Text>
+                <Text style={styles.emptySubtext}>Tap the heart icon on a track to add it here</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionCount}>{favorites.length} tracks</Text>
+                  <TouchableOpacity 
+                    style={styles.playAllSmall}
+                    onPress={() => handlePlayAll(favorites)}
+                  >
+                    <Ionicons name="play" size={14} color="#4A3463" />
+                    <Text style={styles.playAllSmallText}>Play All</Text>
+                  </TouchableOpacity>
+                </View>
+                {favorites.map(renderTrackRow)}
+              </>
+            )}
+          </View>
         )}
 
-        {!isSubscribed && (
-          <TouchableOpacity
-            style={styles.premiumBanner}
-            onPress={() => router.push('/subscription')}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={['#4A3463', '#2D1F3D']}
-              style={styles.premiumGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+        {/* Playlists Tab */}
+        {activeTab === 'playlists' && (
+          <View>
+            <TouchableOpacity 
+              style={styles.createPlaylistButton}
+              onPress={() => setShowCreateModal(true)}
             >
-              <View style={styles.premiumContent}>
-                <Ionicons name="diamond" size={28} color="#C9A961" />
-                <View style={styles.premiumTextContainer}>
-                  <Text style={styles.premiumTitle}>Unlock Premium</Text>
-                  <Text style={styles.premiumSubtitle}>
-                    Get access to {instrumentals.filter(i => i.is_premium).length} more instrumentals
-                  </Text>
-                </View>
+              <View style={styles.createPlaylistIcon}>
+                <Ionicons name="add" size={24} color="#4A3463" />
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#C9A961" />
-            </LinearGradient>
-          </TouchableOpacity>
+              <Text style={styles.createPlaylistText}>Create New Playlist</Text>
+            </TouchableOpacity>
+
+            {playlists.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="albums-outline" size={48} color="#8B8B8B" />
+                <Text style={styles.emptyText}>No playlists yet</Text>
+                <Text style={styles.emptySubtext}>Create your first playlist above</Text>
+              </View>
+            ) : (
+              playlists.map((playlist) => (
+                <TouchableOpacity
+                  key={playlist.id}
+                  style={styles.playlistCard}
+                  onPress={() => handlePlaylistPress(playlist)}
+                >
+                  <LinearGradient
+                    colors={[playlist.cover_color, '#2D1F3D']}
+                    style={styles.playlistCover}
+                  >
+                    <Ionicons name="musical-notes" size={24} color="rgba(255, 255, 255, 0.5)" />
+                  </LinearGradient>
+                  <View style={styles.playlistInfo}>
+                    <Text style={styles.playlistName}>{playlist.name}</Text>
+                    <Text style={styles.playlistTrackCount}>{playlist.track_ids.length} tracks</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#8B8B8B" />
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* Downloads Tab */}
+        {activeTab === 'downloads' && (
+          <View>
+            {downloadedTracksList.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="cloud-download-outline" size={48} color="#8B8B8B" />
+                <Text style={styles.emptyText}>No downloads yet</Text>
+                <Text style={styles.emptySubtext}>Download tracks for offline listening</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionCount}>{downloadedTracksList.length} tracks downloaded</Text>
+                </View>
+                {downloadedTracksList.map(renderTrackRow)}
+              </>
+            )}
+          </View>
         )}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Create Playlist Modal */}
+      <Modal
+        visible={showCreateModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Create Playlist</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Playlist name"
+              value={newPlaylistName}
+              onChangeText={setNewPlaylistName}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancel}
+                onPress={() => {
+                  setNewPlaylistName('');
+                  setShowCreateModal(false);
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalCreate}
+                onPress={handleCreatePlaylist}
+              >
+                <Text style={styles.modalCreateText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -173,6 +370,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAF8F5',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -201,65 +402,66 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  statsContainer: {
+  tabs: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     marginTop: 16,
-    gap: 12,
+    gap: 8,
   },
-  statCard: {
+  tab: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#4A3463',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    gap: 6,
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#4A3463',
+  activeTab: {
+    backgroundColor: 'rgba(74, 52, 99, 0.1)',
   },
-  statLabel: {
-    fontSize: 12,
+  tabText: {
+    fontSize: 13,
+    fontWeight: '500',
     color: '#8B8B8B',
-    marginTop: 4,
+  },
+  activeTabText: {
+    color: '#4A3463',
   },
   content: {
     flex: 1,
-    marginTop: 20,
+    marginTop: 16,
+    paddingHorizontal: 20,
   },
-  moodSection: {
-    marginBottom: 24,
-  },
-  moodHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     marginBottom: 12,
   },
-  moodTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D2D2D',
-  },
-  trackCount: {
-    fontSize: 13,
+  sectionCount: {
+    fontSize: 14,
     color: '#8B8B8B',
+  },
+  playAllSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  playAllSmallText: {
+    fontSize: 14,
+    color: '#4A3463',
+    fontWeight: '500',
   },
   trackRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(74, 52, 99, 0.05)',
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 8,
   },
   trackThumbnail: {
     width: 44,
@@ -277,40 +479,174 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2D2D2D',
   },
-  trackDuration: {
+  trackMeta: {
     fontSize: 12,
     color: '#8B8B8B',
     marginTop: 2,
   },
-  premiumBanner: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
   },
-  premiumGradient: {
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2D2D2D',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#8B8B8B',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  createPlaylistButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  createPlaylistIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: 'rgba(74, 52, 99, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createPlaylistText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#4A3463',
+    marginLeft: 12,
+  },
+  playlistCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  playlistCover: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playlistInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  playlistName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  playlistTrackCount: {
+    fontSize: 13,
+    color: '#8B8B8B',
+    marginTop: 2,
+  },
+  // Playlist Detail
+  playlistHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  premiumContent: {
+  playlistTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2D2D2D',
+  },
+  playlistStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 16,
   },
-  premiumTextContainer: {
-    marginLeft: 16,
+  playlistCount: {
+    fontSize: 14,
+    color: '#8B8B8B',
   },
-  premiumTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  playAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4A3463',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  playAllText: {
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
-  premiumSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 4,
+  tracksList: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FAF8F5',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 52, 99, 0.2)',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+    gap: 12,
+  },
+  modalCancel: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  modalCancelText: {
+    color: '#8B8B8B',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  modalCreate: {
+    backgroundColor: '#4A3463',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  modalCreateText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
   bottomSpacing: {
     height: 100,
