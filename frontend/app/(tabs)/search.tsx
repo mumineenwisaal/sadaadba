@@ -28,6 +28,7 @@ export default function SearchScreen() {
     isSubscribed,
     setCurrentTrack,
     isLoading,
+    playTrack,
   } = useAppStore();
 
   const [localQuery, setLocalQuery] = useState(searchQuery);
@@ -43,12 +44,12 @@ export default function SearchScreen() {
     return () => clearTimeout(timer);
   }, [localQuery]);
 
-  const handleTrackPress = (track: Instrumental) => {
+  const handleTrackPress = async (track: Instrumental) => {
     Keyboard.dismiss();
     if (track.is_premium && !isSubscribed) {
       router.push('/subscription');
     } else {
-      setCurrentTrack(track);
+      await playTrack(track);
       router.push('/player');
     }
   };
