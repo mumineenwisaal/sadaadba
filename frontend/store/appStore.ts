@@ -98,9 +98,11 @@ interface AppState {
   seekTo: (position: number) => Promise<void>;
   playNext: () => Promise<void>;
   playPrevious: () => Promise<void>;
+  stopPlayback: () => Promise<void>;
   toggleLoop: () => void;
   toggleShuffle: () => void;
   setQueue: (tracks: Instrumental[]) => void;
+  setCurrentTrack: (track: Instrumental | null) => void;
   
   // Favorites actions
   fetchFavorites: () => Promise<void>;
