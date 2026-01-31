@@ -55,11 +55,13 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [selectedMood]);
 
-  const handleTrackPress = (track: Instrumental) => {
+  const { playTrack } = useAppStore();
+
+  const handleTrackPress = async (track: Instrumental) => {
     if (track.is_premium && !isSubscribed) {
       router.push('/subscription');
     } else {
-      setCurrentTrack(track);
+      await playTrack(track);
       router.push('/player');
     }
   };
