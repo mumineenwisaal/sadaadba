@@ -3,11 +3,14 @@ import axios from 'axios';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import TrackPlayer, { State, Event, RepeatMode } from 'react-native-track-player';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as audioService from '../services/audioService';
 import { checkIsOnline, subscribeToNetworkChanges } from '../services/networkService';
-import { setupPlayer, formatTrack } from '../services/playbackService';
+
+// TrackPlayer will be dynamically imported on native platforms only
+let TrackPlayer: any = null;
+let setupPlayer: any = null;
+let formatTrack: any = null;
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
 
