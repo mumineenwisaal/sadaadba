@@ -256,8 +256,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       
       // Apply saved loop setting to TrackPlayer
-      if (Platform.OS !== 'web' && savedLoop === 'true') {
+      if (Platform.OS !== 'web' && savedLoop === 'true' && TrackPlayer) {
         try {
+          const { RepeatMode } = await import('react-native-track-player');
           await TrackPlayer.setRepeatMode(RepeatMode.Track);
         } catch (e) {}
       }
