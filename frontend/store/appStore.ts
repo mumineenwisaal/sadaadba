@@ -124,6 +124,8 @@ interface AppState {
   
   // Player actions
   playTrack: (track: Instrumental, queue?: Instrumental[]) => Promise<void>;
+  playPreview: (track: Instrumental) => Promise<void>;
+  stopPreview: () => Promise<void>;
   pauseTrack: () => Promise<void>;
   resumeTrack: () => Promise<void>;
   seekTo: (position: number) => Promise<void>;
