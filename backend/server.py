@@ -65,6 +65,8 @@ class InstrumentalUpdate(BaseModel):
     audio_url: Optional[str] = None
     thumbnail_color: Optional[str] = None
     file_size: Optional[int] = None
+    preview_start: Optional[int] = None
+    preview_end: Optional[int] = None
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
