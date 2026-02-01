@@ -459,8 +459,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ isPlaying: true });
   },
-    set({ isPlaying: true });
-  },
 
   seekTo: async (position: number) => {
     const state = get() as any;
