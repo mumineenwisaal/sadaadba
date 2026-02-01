@@ -469,17 +469,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   seekTo: async (position: number) => {
-    if (Platform.OS !== 'web') {
-      try {
-        // TrackPlayer uses seconds
-        await TrackPlayer.seekTo(position / 1000);
-      } catch (e) {}
-    } else {
-      // Web fallback
-      const state = get() as any;
-      if (state._webSound) {
-        await state._webSound.setPositionAsync(position);
-      }
+    const state = get() as any;
+    if (state._webSound) {
+      await state._webSound.setPositionAsync(position);
     }
     set({ playbackPosition: position });
   },
