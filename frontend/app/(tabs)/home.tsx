@@ -185,6 +185,7 @@ export default function HomeScreen() {
 
   const renderTrackCard = (track: Instrumental, index: number) => {
     const downloaded = isTrackDownloaded(track.id);
+    const hasPreview = track.is_premium && !isSubscribed && track.preview_start !== null && track.preview_end !== null;
     
     return (
     <TouchableOpacity
@@ -203,6 +204,12 @@ export default function HomeScreen() {
         {track.is_premium && !isSubscribed && (
           <View style={styles.lockBadge}>
             <Ionicons name="lock-closed" size={12} color="#C9A961" />
+          </View>
+        )}
+        {hasPreview && (
+          <View style={styles.previewBadge}>
+            <Ionicons name="play-circle" size={10} color="#FF9800" />
+            <Text style={styles.previewBadgeText}>Preview</Text>
           </View>
         )}
         {downloaded && (
