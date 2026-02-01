@@ -294,7 +294,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Offline-first functionality for playlists, favorites, and downloads"
+    - "Preview feature for premium tracks"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -304,5 +304,7 @@ agent_communication:
     message: "MVP complete. All screens implemented: Splash, Home (featured banner, mood filters, free/premium sections), Search, Library, Player (with animated waveform), Subscription (₹53/month with mock payment). Backend APIs working. Visual verification done via screenshots."
   - agent: "main"
     message: "Implemented offline-first functionality: (1) Playlists saved locally and visible offline (2) Favorites stored locally and accessible offline (3) Downloads show track metadata even when offline (4) Offline indicators added to Home and Library screens (5) Proper error messages when trying to play non-downloaded tracks offline (6) Track metadata stored with downloads for offline display."
+  - agent: "main"
+    message: "Implemented Preview Feature for Premium Tracks: (1) Added preview_start and preview_end fields to Instrumental model in backend (2) All premium tracks now have preview times stored in MongoDB (3) Created preview.tsx screen for preview playback (4) Non-premium users can now preview a portion of premium tracks (e.g., 30-second snippet from 1:10-1:40) (5) Preview badges added to track cards in Home and Search screens (6) Preview player shows progress within the preview range and prompts subscription after preview ends"
   - agent: "testing"
     message: "✅ PREVIEW FEATURE TESTING COMPLETE: All 7 tests passed. Premium instrumentals (9/9) have preview_start and preview_end fields with 30-second durations. Free tracks (6/6) correctly have null preview values. Premium filter API works correctly. Preview time ranges are valid and within track bounds. Backend API fully functional for preview feature."
