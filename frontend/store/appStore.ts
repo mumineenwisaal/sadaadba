@@ -888,16 +888,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       
       if (result) {
+        const newDownloadedTracks = {
+          ...get().downloadedTracks,
+          [track.id]: result
+        };
+        
         set((state) => ({
           downloads: {
             ...state.downloads,
             [track.id]: { trackId: track.id, progress: 1, isDownloading: false, isDownloaded: true }
           },
-          downloadedTracks: {
-            ...state.downloadedTracks,
-            [track.id]: result
-          }
+          downloadedTracks: newDownloadedTracks
         }));
+        
+        // Save to local storage for offline persistence
+        await AsyncStorage.setItem(STORAGE_KEYS.DOWNLOADED_TRACKS, JSON.stringify(newDownloadedTracks));
+        
         return true;
       }
       return false;
