@@ -62,7 +62,10 @@ export default function SearchScreen() {
     }
   };
 
-  const renderTrackItem = ({ item }: { item: Instrumental }) => (
+  const renderTrackItem = ({ item }: { item: Instrumental }) => {
+    const hasPreview = item.is_premium && !isSubscribed && item.preview_start !== null && item.preview_end !== null;
+    
+    return (
     <TouchableOpacity
       style={styles.trackItem}
       onPress={() => handleTrackPress(item)}
@@ -89,6 +92,12 @@ export default function SearchScreen() {
           <View style={styles.moodTag}>
             <Text style={styles.moodTagText}>{item.mood}</Text>
           </View>
+          {hasPreview && (
+            <View style={styles.previewTag}>
+              <Ionicons name="play-circle" size={10} color="#FF9800" />
+              <Text style={styles.previewTagText}>Preview</Text>
+            </View>
+          )}
           <Text style={styles.trackDuration}>{item.duration_formatted}</Text>
         </View>
       </View>
@@ -96,7 +105,7 @@ export default function SearchScreen() {
         <Ionicons name="play" size={18} color="#4A3463" />
       </View>
     </TouchableOpacity>
-  );
+  )};
 
   const renderMoodFilter = () => (
     <View style={styles.moodFilterContainer}>
