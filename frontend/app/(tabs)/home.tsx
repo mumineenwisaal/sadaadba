@@ -36,6 +36,7 @@ export default function HomeScreen() {
     initializeApp,
     playTrack,
     isTrackDownloaded,
+    isOnline,
   } = useAppStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -52,11 +53,12 @@ export default function HomeScreen() {
   }, []);
 
   const onRefresh = useCallback(async () => {
+    if (!isOnline) return;
     setRefreshing(true);
     await fetchFeaturedInstrumentals();
     await fetchInstrumentals(selectedMood);
     setRefreshing(false);
-  }, [selectedMood]);
+  }, [selectedMood, isOnline]);
 
   const handleTrackPress = async (track: Instrumental) => {
     // Check if track can be played
