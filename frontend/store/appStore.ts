@@ -102,7 +102,7 @@ interface AppState {
   
   // Download state
   downloads: Record<string, DownloadStatus>;
-  downloadedTracks: Record<string, audioService.DownloadedTrack>;
+  downloadedTracks: Record<string, DownloadedTrackWithMetadata>;
   
   // Actions
   setIsOnline: (online: boolean) => void;
