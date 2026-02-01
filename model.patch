@@ -1,29 +1,34 @@
-diff --git a/test_result.md b/test_result.md
-index c2c4801..1ed4f69 100644
---- a/test_result.md
-+++ b/test_result.md
-@@ -177,6 +177,18 @@ backend:
-         agent: "main"
-         comment: "Mock subscription at /api/subscription/subscribe, status check, restore"
- 
-+  - task: "Preview feature for premium instrumentals"
-+    implemented: true
-+    working: true
-+    file: "server.py"
-+    stuck_count: 0
-+    priority: "high"
-+    needs_retesting: false
-+    status_history:
-+      - working: true
-+        agent: "testing"
-+        comment: "✅ ALL PREVIEW FEATURE TESTS PASSED! Premium tracks (9/9) have preview_start and preview_end fields populated with 30s durations. Free tracks (6/6) have null preview values. GET /api/instrumentals?is_premium=true returns only premium tracks with preview times. Preview ranges are valid (preview_start < preview_end, ~30s duration, within track bounds)."
-+
- frontend:
-   - task: "Splash Screen"
-     implemented: true
-@@ -292,3 +304,5 @@ agent_communication:
-     message: "MVP complete. All screens implemented: Splash, Home (featured banner, mood filters, free/premium sections), Search, Library, Player (with animated waveform), Subscription (₹53/month with mock payment). Backend APIs working. Visual verification done via screenshots."
-   - agent: "main"
-     message: "Implemented offline-first functionality: (1) Playlists saved locally and visible offline (2) Favorites stored locally and accessible offline (3) Downloads show track metadata even when offline (4) Offline indicators added to Home and Library screens (5) Proper error messages when trying to play non-downloaded tracks offline (6) Track metadata stored with downloads for offline display."
-+  - agent: "testing"
-+    message: "✅ PREVIEW FEATURE TESTING COMPLETE: All 7 tests passed. Premium instrumentals (9/9) have preview_start and preview_end fields with 30-second durations. Free tracks (6/6) correctly have null preview values. Premium filter API works correctly. Preview time ranges are valid and within track bounds. Backend API fully functional for preview feature."
+diff --git a/model.patch b/model.patch
+index c23d496..e69de29 100644
+--- a/model.patch
++++ b/model.patch
+@@ -1,29 +0,0 @@
+-diff --git a/test_result.md b/test_result.md
+-index c2c4801..1ed4f69 100644
+---- a/test_result.md
+-+++ b/test_result.md
+-@@ -177,6 +177,18 @@ backend:
+-         agent: "main"
+-         comment: "Mock subscription at /api/subscription/subscribe, status check, restore"
+- 
+-+  - task: "Preview feature for premium instrumentals"
+-+    implemented: true
+-+    working: true
+-+    file: "server.py"
+-+    stuck_count: 0
+-+    priority: "high"
+-+    needs_retesting: false
+-+    status_history:
+-+      - working: true
+-+        agent: "testing"
+-+        comment: "✅ ALL PREVIEW FEATURE TESTS PASSED! Premium tracks (9/9) have preview_start and preview_end fields populated with 30s durations. Free tracks (6/6) have null preview values. GET /api/instrumentals?is_premium=true returns only premium tracks with preview times. Preview ranges are valid (preview_start < preview_end, ~30s duration, within track bounds)."
+-+
+- frontend:
+-   - task: "Splash Screen"
+-     implemented: true
+-@@ -292,3 +304,5 @@ agent_communication:
+-     message: "MVP complete. All screens implemented: Splash, Home (featured banner, mood filters, free/premium sections), Search, Library, Player (with animated waveform), Subscription (₹53/month with mock payment). Backend APIs working. Visual verification done via screenshots."
+-   - agent: "main"
+-     message: "Implemented offline-first functionality: (1) Playlists saved locally and visible offline (2) Favorites stored locally and accessible offline (3) Downloads show track metadata even when offline (4) Offline indicators added to Home and Library screens (5) Proper error messages when trying to play non-downloaded tracks offline (6) Track metadata stored with downloads for offline display."
+-+  - agent: "testing"
+-+    message: "✅ PREVIEW FEATURE TESTING COMPLETE: All 7 tests passed. Premium instrumentals (9/9) have preview_start and preview_end fields with 30-second durations. Free tracks (6/6) correctly have null preview values. Premium filter API works correctly. Preview time ranges are valid and within track bounds. Backend API fully functional for preview feature."
