@@ -192,8 +192,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   initializeApp: async () => {
     set({ isLoading: true });
     try {
-      // For now, we use expo-av on all platforms
-      // TrackPlayer integration will be available on native builds
+      // Setup audio using expo-av
       set({ isPlayerReady: true });
       
       // Setup audio mode for background playback (expo-av)
