@@ -458,6 +458,109 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  playPreview: async (track: Instrumental) => {
+    const { downloadedTracks, isOnline } = get();
+    
+    // Get preview times from track (in seconds, convert to milliseconds)
+    const previewStart = (track.preview_start || 0) * 1000;
+    const previewEnd = (track.preview_end || 30) * 1000;
+    
+    // Check if track can be played
+    const isDownloaded = !!downloadedTracks[track.id];
+    
+    if (!isDownloaded && !isOnline) {
+      set({ playbackError: 'Internet connection required to preview this audio.' });
+      return;
+    }
+    
+    try {
+      set({ 
+        isBuffering: true, 
+        currentTrack: track, 
+        isPlaying: false, 
+        playbackError: null,
+        isPreviewMode: true,
+        previewStartTime: previewStart,
+        previewEndTime: previewEnd,
+      });
+      
+      // Use expo-av for audio playback
+      const { Audio } = await import('expo-av');
+      
+      // Get audio URL
+      let audioUri = track.audio_url;
+      const downloaded = downloadedTracks[track.id];
+      if (downloaded) {
+        audioUri = downloaded.localUri;
+      }
+      
+      if (!audioUri) {
+        set({ isBuffering: false, isPreviewMode: false });
+        return;
+      }
+      
+      // Unload previous sound if exists
+      const prevState = get() as any;
+      if (prevState._webSound) {
+        await prevState._webSound.unloadAsync();
+      }
+      
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: false, progressUpdateIntervalMillis: 200, positionMillis: previewStart },
+        (status: any) => {
+          if (status.isLoaded) {
+            const { isPreviewMode, previewEndTime } = get();
+            
+            set({ 
+              playbackPosition: status.positionMillis,
+              playbackDuration: status.durationMillis || track.duration * 1000,
+              isPlaying: status.isPlaying,
+              isBuffering: status.isBuffering,
+            });
+            
+            // Stop at preview end time
+            if (isPreviewMode && status.positionMillis >= previewEndTime) {
+              get().stopPreview();
+            }
+            
+            if (status.didJustFinish) {
+              get().stopPreview();
+            }
+          }
+        }
+      );
+      
+      // Store sound reference and start playing
+      (set as any)({ _webSound: sound });
+      await sound.playAsync();
+      set({ isPlaying: true, isBuffering: false });
+      
+    } catch (error) {
+      console.error('Error playing preview:', error);
+      set({ isBuffering: false, isPlaying: false, isPreviewMode: false, playbackError: 'Failed to play preview.' });
+    }
+  },
+
+  stopPreview: async () => {
+    const state = get() as any;
+    if (state._webSound) {
+      try {
+        await state._webSound.stopAsync();
+        await state._webSound.unloadAsync();
+      } catch (e) {
+        console.log('Error stopping preview:', e);
+      }
+    }
+    set({ 
+      isPlaying: false,
+      isPreviewMode: false,
+      previewStartTime: 0,
+      previewEndTime: 0,
+      _webSound: null,
+    });
+  },
+
   pauseTrack: async () => {
     const state = get() as any;
     if (state._webSound) {
