@@ -70,7 +70,12 @@ export default function RingtoneTrimmerScreen() {
     let mounted = true;
     
     // Wait for track to be available (params might not be ready immediately)
-    if (!trackId || !track) {
+    if (!trackId) {
+      return;
+    }
+    
+    if (!track) {
+      // Track not found in the list yet, wait for app to initialize
       return;
     }
     
@@ -135,7 +140,7 @@ export default function RingtoneTrimmerScreen() {
       mounted = false;
       clearTimeout(timer);
     };
-  }, [trackId, track?.id]);
+  }, [trackId, track?.id, track?.audio_url]);
 
     return () => {
       if (sound) {
