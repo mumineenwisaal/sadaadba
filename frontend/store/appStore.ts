@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   FAVORITES: 'sadaa_favorites',
   PLAYLISTS: 'sadaa_playlists',
   SUBSCRIPTION: 'sadaa_subscription',
+  DOWNLOADED_TRACKS: 'sadaa_downloaded_tracks',
 };
 
 export interface Instrumental {
