@@ -69,12 +69,12 @@ export default function RingtoneTrimmerScreen() {
   useEffect(() => {
     let mounted = true;
     
+    // Wait for track to be available (params might not be ready immediately)
+    if (!trackId || !track) {
+      return;
+    }
+    
     const loadAudio = async () => {
-      if (!track) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
         setIsLoading(true);
 
@@ -135,7 +135,7 @@ export default function RingtoneTrimmerScreen() {
       mounted = false;
       clearTimeout(timer);
     };
-  }, [track?.id]);
+  }, [trackId, track?.id]);
 
     return () => {
       if (sound) {
