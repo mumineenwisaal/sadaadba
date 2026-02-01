@@ -4,6 +4,7 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MiniPlayer from '../../components/MiniPlayer';
+import { COLORS } from '../../constants/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -14,20 +15,15 @@ export default function TabLayout() {
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: '#FFFFFF',
-            borderTopColor: 'rgba(74, 52, 99, 0.1)',
+            backgroundColor: COLORS.secondaryBg,
+            borderTopColor: 'rgba(255, 255, 255, 0.05)',
             borderTopWidth: 1,
             height: 60 + insets.bottom,
             paddingBottom: insets.bottom,
             paddingTop: 8,
-            elevation: 8,
-            shadowColor: '#4A3463',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
           },
-          tabBarActiveTintColor: '#4A3463',
-          tabBarInactiveTintColor: '#8B8B8B',
+          tabBarActiveTintColor: COLORS.accentBlue,
+          tabBarInactiveTintColor: COLORS.textMuted,
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '500',
@@ -71,5 +67,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.primaryBg,
   },
 });
