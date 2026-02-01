@@ -395,59 +395,54 @@ export const useAppStore = create<AppState>((set, get) => ({
         axios.post(`${API_BASE}/api/instrumentals/${track.id}/play`).catch(() => {});
       }
       
-      // Use TrackPlayer on native platforms
-      if (Platform.OS !== 'web' && isPlayerReady) {
-        // Reset the queue
-        await TrackPlayer.reset();
-        
-        // Format tracks for the queue
-        const formattedQueue = playQueue.map((t) => {
-          const downloaded = downloadedTracks[t.id];
-          const localUri = downloaded?.localUri;
-          return formatTrack(t, localUri);
-        });
-        
-        // Add all tracks to the queue
-        await TrackPlayer.add(formattedQueue);
-        
-        // Skip to the requested track
-        if (queueIndex > 0) {
-          await TrackPlayer.skip(queueIndex);
+      // Use expo-av for audio playback on all platforms
+      const { Audio } = await import('expo-av');
+      
+      // Get audio URL (local if downloaded, otherwise remote)
+      let audioUri = track.audio_url;
+      const downloaded = downloadedTracks[track.id];
+      if (downloaded) {
+        audioUri = downloaded.localUri;
+      }
+      
+      if (!audioUri) {
+        set({ isBuffering: false });
+        return;
+      }
+      
+      // Unload previous sound if exists
+      const prevState = get() as any;
+      if (prevState._webSound) {
+        await prevState._webSound.unloadAsync();
+      }
+      
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true, progressUpdateIntervalMillis: 500 },
+        (status: any) => {
+          if (status.isLoaded) {
+            set({ 
+              playbackPosition: status.positionMillis,
+              playbackDuration: status.durationMillis || track.duration * 1000,
+              isPlaying: status.isPlaying,
+              isBuffering: status.isBuffering,
+            });
+            
+            if (status.didJustFinish) {
+              const { isLoopEnabled } = get();
+              if (isLoopEnabled) {
+                get().seekTo(0).then(() => get().resumeTrack());
+              } else {
+                get().playNext();
+              }
+            }
+          }
         }
-        
-        // Start playback
-        await TrackPlayer.play();
-        
-        set({ isPlaying: true, isBuffering: false });
-      } else {
-        // Web fallback using Audio API
-        const { Audio } = await import('expo-av');
-        
-        // Get audio URL (local if downloaded, otherwise remote)
-        let audioUri = track.audio_url;
-        const downloaded = downloadedTracks[track.id];
-        if (downloaded) {
-          audioUri = downloaded.localUri;
-        }
-        
-        if (!audioUri) {
-          set({ isBuffering: false });
-          return;
-        }
-        
-        // Unload previous sound if exists
-        const prevState = get() as any;
-        if (prevState._webSound) {
-          await prevState._webSound.unloadAsync();
-        }
-        
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUri },
-          { shouldPlay: true, progressUpdateIntervalMillis: 500 },
-          (status: any) => {
-            if (status.isLoaded) {
-              set({ 
-                playbackPosition: status.positionMillis,
+      );
+      
+      // Store sound reference
+      (set as any)({ _webSound: sound });
+      set({ isPlaying: true, isBuffering: false });
                 playbackDuration: status.durationMillis || track.duration * 1000,
                 isPlaying: status.isPlaying,
                 isBuffering: status.isBuffering,
