@@ -658,8 +658,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     AsyncStorage.setItem('isLoopEnabled', String(newValue));
     
     // Apply to TrackPlayer
-    if (Platform.OS !== 'web') {
-      TrackPlayer.setRepeatMode(newValue ? RepeatMode.Track : RepeatMode.Off).catch(() => {});
+    if (Platform.OS !== 'web' && TrackPlayer) {
+      import('react-native-track-player').then(({ RepeatMode }) => {
+        TrackPlayer.setRepeatMode(newValue ? RepeatMode.Track : RepeatMode.Off).catch(() => {});
+      }).catch(() => {});
     }
   },
 
