@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FAF8F5',
+    backgroundColor: COLORS.secondaryBg,
     borderRadius: 20,
     padding: 28,
     alignItems: 'center',
@@ -529,18 +529,18 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#2D2D2D',
+    color: COLORS.textPrimary,
     marginBottom: 10,
   },
   modalDescription: {
     fontSize: 14,
-    color: '#8B8B8B',
+    color: COLORS.textMuted,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
   },
   modalSubscribeButton: {
-    backgroundColor: '#4A3463',
+    backgroundColor: COLORS.accentBlue,
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 25,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalSubscribeText: {
-    color: '#FFFFFF',
+    color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   modalCloseText: {
-    color: '#8B8B8B',
+    color: COLORS.textMuted,
     fontSize: 14,
     fontWeight: '500',
   },
