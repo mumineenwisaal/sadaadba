@@ -37,6 +37,9 @@ class Instrumental(BaseModel):
     thumbnail_color: str = "#4A3463"
     file_size: int = 0
     play_count: int = 0
+    # Preview settings for premium tracks (in seconds)
+    preview_start: Optional[int] = None  # Start time in seconds (e.g., 70 for 1:10)
+    preview_end: Optional[int] = None    # End time in seconds (e.g., 100 for 1:40)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class InstrumentalCreate(BaseModel):
