@@ -284,7 +284,7 @@ export default function PreviewScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Sadaa Instrumentals</Text>
+        <Text style={styles.footerText}>{APP_NAME}</Text>
       </View>
     </LinearGradient>
   );
