@@ -131,7 +131,29 @@ export default function LibraryScreen() {
     }
   };
 
-  const downloadedTracksList = instrumentals.filter(i => downloadedTracks[i.id]);
+  // Get downloaded tracks - try from instrumentals first, then from metadata
+  const getDownloadedTracksList = (): Instrumental[] => {
+    const trackIds = Object.keys(downloadedTracks);
+    const tracks: Instrumental[] = [];
+    
+    for (const trackId of trackIds) {
+      // First try to find in instrumentals list
+      const fromInstrumentals = instrumentals.find(i => i.id === trackId);
+      if (fromInstrumentals) {
+        tracks.push(fromInstrumentals);
+      } else {
+        // If not in instrumentals (offline), use stored metadata
+        const downloadInfo = downloadedTracks[trackId];
+        if (downloadInfo.trackMetadata) {
+          tracks.push(downloadInfo.trackMetadata);
+        }
+      }
+    }
+    
+    return tracks;
+  };
+
+  const downloadedTracksList = getDownloadedTracksList();
 
   const renderTrackRow = (track: Instrumental, showDownloadButton: boolean = true) => {
     const downloaded = isTrackDownloaded(track.id);
