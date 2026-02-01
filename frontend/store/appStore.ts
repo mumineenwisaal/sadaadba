@@ -93,8 +93,9 @@ interface AppState {
   isPlaying: boolean;
   playbackPosition: number;
   playbackDuration: number;
-  sound: Audio.Sound | null;
   isBuffering: boolean;
+  isPlayerReady: boolean;
+  playbackError: string | null;
   
   // Player controls
   isLoopEnabled: boolean;
