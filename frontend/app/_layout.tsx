@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import TrackPlayer from 'react-native-track-player';
+import { PlaybackService } from '../services/playbackService';
+
+// Register the playback service (must be done at module level for background operation)
+if (Platform.OS !== 'web') {
+  TrackPlayer.registerPlaybackService(() => PlaybackService);
+}
 
 export default function RootLayout() {
   return (
