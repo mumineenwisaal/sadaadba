@@ -177,6 +177,18 @@ backend:
         agent: "main"
         comment: "Mock subscription at /api/subscription/subscribe, status check, restore"
 
+  - task: "Preview feature for premium instrumentals"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ ALL PREVIEW FEATURE TESTS PASSED! Premium tracks (9/9) have preview_start and preview_end fields populated with 30s durations. Free tracks (6/6) have null preview values. GET /api/instrumentals?is_premium=true returns only premium tracks with preview times. Preview ranges are valid (preview_start < preview_end, ~30s duration, within track bounds)."
+
 frontend:
   - task: "Splash Screen"
     implemented: true
