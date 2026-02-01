@@ -227,6 +227,12 @@ export default function PlayerScreen() {
     if (isTrackDownloaded(currentTrack.id)) {
       await deleteDownload(currentTrack.id);
     } else {
+      // Check if online before downloading
+      const { isOnline } = useAppStore.getState();
+      if (!isOnline) {
+        Alert.alert('Offline', 'Connect to the internet to download this audio.');
+        return;
+      }
       await downloadTrack(currentTrack);
     }
   };
