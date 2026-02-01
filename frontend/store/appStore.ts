@@ -846,7 +846,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const downloaded = await audioService.getDownloadedTracks();
       set({ downloadedTracks: downloaded });
-    } catch (error) {}
+      // Also save to local storage for reference
+      await AsyncStorage.setItem(STORAGE_KEYS.DOWNLOADED_TRACKS, JSON.stringify(downloaded));
+    } catch (error) {
+      console.error('Failed to load downloaded tracks:', error);
+      // Try to load from async storage backup
+      try {
+        const cached = await AsyncStorage.getItem(STORAGE_KEYS.DOWNLOADED_TRACKS);
+        if (cached) {
+          set({ downloadedTracks: JSON.parse(cached) });
+        }
+      } catch (e) {}
+    }
   },
 
   downloadTrack: async (track: Instrumental) => {
