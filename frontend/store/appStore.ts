@@ -922,13 +922,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const success = await audioService.deleteDownloadedAudio(trackId);
       if (success) {
-        set((state) => {
-          const newDownloads = { ...state.downloads };
-          const newDownloadedTracks = { ...state.downloadedTracks };
-          delete newDownloads[trackId];
-          delete newDownloadedTracks[trackId];
-          return { downloads: newDownloads, downloadedTracks: newDownloadedTracks };
-        });
+        const newDownloads = { ...get().downloads };
+        const newDownloadedTracks = { ...get().downloadedTracks };
+        delete newDownloads[trackId];
+        delete newDownloadedTracks[trackId];
+        
+        set({ downloads: newDownloads, downloadedTracks: newDownloadedTracks });
+        
+        // Update local storage
+        await AsyncStorage.setItem(STORAGE_KEYS.DOWNLOADED_TRACKS, JSON.stringify(newDownloadedTracks));
+        
         return true;
       }
       return false;
