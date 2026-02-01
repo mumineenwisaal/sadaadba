@@ -52,6 +52,8 @@ class InstrumentalCreate(BaseModel):
     audio_url: Optional[str] = None
     thumbnail_color: str = "#4A3463"
     file_size: int = 0
+    preview_start: Optional[int] = None
+    preview_end: Optional[int] = None
 
 class InstrumentalUpdate(BaseModel):
     title: Optional[str] = None
