@@ -392,7 +392,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     
     try {
-      set({ isBuffering: true, currentTrack: track, isPlaying: false, playbackError: null });
+      set({ isBuffering: true, currentTrack: track, isPlaying: false, playbackError: null, isPreviewMode: false });
       
       const playQueue = queue || (isSubscribed ? instrumentals : instrumentals.filter(i => !i.is_premium));
       const queueIndex = playQueue.findIndex(t => t.id === track.id);
