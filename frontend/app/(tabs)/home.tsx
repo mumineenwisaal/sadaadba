@@ -35,6 +35,7 @@ export default function HomeScreen() {
     isLoading,
     initializeApp,
     playTrack,
+    playPreview,
     isTrackDownloaded,
     isOnline,
   } = useAppStore();
