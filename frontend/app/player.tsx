@@ -219,6 +219,14 @@ export default function PlayerScreen() {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  
+  // Ringtone Modal State
+  const [showRingtoneModal, setShowRingtoneModal] = useState(false);
+  const [ringtoneStartTime, setRingtoneStartTime] = useState(0);
+  const [ringtoneEndTime, setRingtoneEndTime] = useState(MAX_RINGTONE_DURATION);
+  const [isProcessingRingtone, setIsProcessingRingtone] = useState(false);
+  const [ringtoneSound, setRingtoneSound] = useState<Audio.Sound | null>(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
 
   // Show error alert if there's a playback error
   useEffect(() => {
@@ -226,6 +234,15 @@ export default function PlayerScreen() {
       Alert.alert('Playback Error', playbackError);
     }
   }, [playbackError]);
+  
+  // Cleanup ringtone sound on unmount
+  useEffect(() => {
+    return () => {
+      if (ringtoneSound) {
+        ringtoneSound.unloadAsync();
+      }
+    };
+  }, [ringtoneSound]);
 
   const handlePlayPause = async () => {
     if (isPlaying) {
