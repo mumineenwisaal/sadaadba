@@ -188,6 +188,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isBuffering: false,
   isPlayerReady: false,
   playbackError: null,
+  // Preview mode
+  isPreviewMode: false,
+  previewStartTime: 0,
+  previewEndTime: 0,
   isLoopEnabled: false,
   isShuffleEnabled: false,
   queue: [],
