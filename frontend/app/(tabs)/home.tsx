@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { useAppStore, Instrumental } from '../../store/appStore';
 import { COLORS, APP_NAME } from '../../constants/theme';
+import { notificationService } from '../../services/notificationService';
 
 const { width, height } = Dimensions.get('window');
 
