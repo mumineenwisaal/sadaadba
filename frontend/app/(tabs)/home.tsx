@@ -331,8 +331,24 @@ export default function HomeScreen() {
               <Ionicons name="diamond" size={14} color={COLORS.accentGold} />
             </View>
           )}
-          <TouchableOpacity style={styles.notificationBtn}>
+          <TouchableOpacity 
+            style={styles.notificationBtn}
+            onPress={() => router.push('/notifications')}
+          >
             <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuBtn}
+            onPress={() => router.push('/menu')}
+          >
+            <Ionicons name="menu" size={24} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
