@@ -416,9 +416,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: COLORS.textPrimary,
+    flexShrink: 1,
   },
   headerRight: {
     flexDirection: 'row',
