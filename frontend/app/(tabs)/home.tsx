@@ -316,26 +316,26 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <View style={styles.logoIcon}>
-            <Ionicons name="musical-notes" size={20} color={COLORS.accentGold} />
+            <Ionicons name="musical-notes" size={18} color={COLORS.accentGold} />
           </View>
-          <Text style={styles.headerTitle}>{APP_NAME}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{APP_NAME}</Text>
         </View>
         <View style={styles.headerRight}>
           {!isOnline && (
-            <View style={styles.offlineIndicator}>
-              <Ionicons name="cloud-offline" size={14} color={COLORS.offline} />
+            <View style={styles.statusBadge}>
+              <Ionicons name="cloud-offline" size={12} color={COLORS.offline} />
             </View>
           )}
           {isSubscribed && (
-            <View style={styles.subscribedBadge}>
-              <Ionicons name="diamond" size={14} color={COLORS.accentGold} />
+            <View style={[styles.statusBadge, styles.premiumBadge]}>
+              <Ionicons name="diamond" size={12} color={COLORS.accentGold} />
             </View>
           )}
           <TouchableOpacity 
-            style={styles.notificationBtn}
+            style={styles.headerIconBtn}
             onPress={() => router.push('/notifications')}
           >
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
+            <Ionicons name="notifications-outline" size={20} color={COLORS.textPrimary} />
             {unreadCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -345,10 +345,10 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.menuBtn}
+            style={styles.headerIconBtn}
             onPress={() => router.push('/menu')}
           >
-            <Ionicons name="menu" size={24} color={COLORS.textPrimary} />
+            <Ionicons name="menu" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
