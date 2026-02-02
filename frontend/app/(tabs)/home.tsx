@@ -462,13 +462,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
   },
-  menuBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
