@@ -2,6 +2,7 @@
 import { Platform, Alert, Linking, PermissionsAndroid } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { Audio, AVPlaybackStatus } from 'expo-av';
 
 export interface TrimSettings {
   startTime: number; // in milliseconds
@@ -40,7 +41,10 @@ export const requestRingtonePermission = async (): Promise<boolean> => {
   }
 };
 
-// Download and prepare audio file for ringtone
+// Trim audio by recording playback segment
+// Since we can't directly trim MP3 in React Native without native modules,
+// we'll download the full file and add metadata about the trim region
+// The sharing dialog will share the full file with instructions
 export const prepareAudioForRingtone = async (
   audioUrl: string,
   trackId: string,
@@ -66,6 +70,10 @@ export const prepareAudioForRingtone = async (
       }
     }
 
+    // Note: Real audio trimming requires native code or FFmpeg
+    // For a complete solution, we would need expo-dev-client with a native module
+    // For now, we provide the full file with trim info in the share message
+
     return fileUri;
   } catch (error) {
     console.error('Error preparing audio for ringtone:', error);
@@ -73,10 +81,20 @@ export const prepareAudioForRingtone = async (
   }
 };
 
+// Get trim info message for sharing
+export const getTrimInfoMessage = (trimSettings: TrimSettings): string => {
+  const startFormatted = formatDuration(trimSettings.startTime);
+  const endFormatted = formatDuration(trimSettings.endTime);
+  const durationFormatted = formatDuration(trimSettings.endTime - trimSettings.startTime);
+  
+  return `Use ${startFormatted} to ${endFormatted} (${durationFormatted}) as your ringtone portion.`;
+};
+
 // Set as ringtone on Android
 export const setAsRingtone = async (
   fileUri: string,
-  title: string
+  title: string,
+  trimSettings?: TrimSettings
 ): Promise<{ success: boolean; message: string }> => {
   if (Platform.OS !== 'android') {
     return {
@@ -97,9 +115,14 @@ export const setAsRingtone = async (
         UTI: 'public.mp3',
       });
       
+      let message = 'Audio file shared. Use your device\'s file manager to set it as ringtone.';
+      if (trimSettings) {
+        message += `\n\n${getTrimInfoMessage(trimSettings)}`;
+      }
+      
       return {
         success: true,
-        message: 'Audio file shared. Use your device\'s file manager to set it as ringtone.',
+        message,
       };
     } else {
       return {
