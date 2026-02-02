@@ -232,14 +232,19 @@ export default function PlayerScreen() {
     }
   }, [playbackError]);
   
-  // Cleanup ringtone sound on unmount
-  useEffect(() => {
-    return () => {
-      if (ringtoneSound) {
-        ringtoneSound.unloadAsync();
-      }
-    };
-  }, [ringtoneSound]);
+  // Ringtone: Get the preview start/end from track data
+  const getRingtoneRange = () => {
+    if (currentTrack?.preview_start !== undefined && currentTrack?.preview_end !== undefined) {
+      // Use preview times from track data (in seconds, convert to ms)
+      return {
+        startTime: currentTrack.preview_start * 1000,
+        endTime: currentTrack.preview_end * 1000,
+      };
+    }
+    // Fallback: use first 30 seconds if no preview defined
+    const fallbackEnd = Math.min(30000, playbackDuration);
+    return { startTime: 0, endTime: fallbackEnd };
+  };
 
   const handlePlayPause = async () => {
     if (isPlaying) {
