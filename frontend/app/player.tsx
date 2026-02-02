@@ -1000,84 +1000,27 @@ const styles = StyleSheet.create({
     color: '#8B8B8B',
     marginTop: 2,
   },
-  ringtoneInstructions: {
+  ringtonePreviewInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(139, 139, 139, 0.1)',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: 'rgba(74, 52, 99, 0.08)',
+    padding: 14,
+    borderRadius: 10,
     marginBottom: 16,
-    gap: 8,
+    gap: 12,
   },
-  ringtoneInstructionText: {
+  ringtonePreviewDetails: {
     flex: 1,
-    fontSize: 13,
-    color: '#8B8B8B',
   },
-  ringtoneTimeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  ringtoneTimeInput: {
-    alignItems: 'center',
-  },
-  ringtoneTimeLabel: {
-    fontSize: 12,
-    color: '#8B8B8B',
-    marginBottom: 4,
-  },
-  ringtoneTimeValue: {
-    fontSize: 16,
+  ringtonePreviewTitle: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#4A3463',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 2,
   },
-  ringtoneDuration: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(201, 169, 97, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  ringtoneDurationLabel: {
-    fontSize: 11,
-    color: '#8B8B8B',
-  },
-  ringtoneDurationValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#C9A961',
-  },
-  ringtoneDurationError: {
-    color: '#E53935',
-  },
-  ringtoneQuickSelect: {
-    marginBottom: 16,
-  },
-  ringtoneQuickLabel: {
+  ringtonePreviewTime: {
     fontSize: 13,
     color: '#8B8B8B',
-    marginBottom: 8,
-  },
-  ringtoneQuickButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  ringtoneQuickButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(74, 52, 99, 0.2)',
-  },
-  ringtoneQuickButtonText: {
-    fontSize: 13,
-    color: '#4A3463',
-    fontWeight: '500',
   },
   ringtonePlatformNote: {
     flexDirection: 'row',
