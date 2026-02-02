@@ -41,6 +41,7 @@ export const COLORS = {
   preview: '#FF9800',
   offline: '#FF9800',
   downloaded: '#4CAF50',
+  error: '#E53935',
 };
 
 export const GRADIENTS = {
