@@ -406,6 +406,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Use expo-av for audio playback on all platforms
       const { Audio } = await import('expo-av');
       
+      // Configure audio mode for background playback (lock screen controls)
+      await Audio.setAudioModeAsync({
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+      
       // Get audio URL (local if downloaded, otherwise remote)
       let audioUri = track.audio_url;
       const downloaded = downloadedTracks[track.id];
