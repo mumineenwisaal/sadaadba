@@ -644,18 +644,25 @@ export default function PlayerScreen() {
                     return;
                   }
                   
+                  const trimSettings = { startTime: ringtoneRange.startTime, endTime: ringtoneRange.endTime };
+                  
                   const preparedFile = await prepareAudioForRingtone(
                     audioUri,
                     currentTrack.id,
                     currentTrack.title,
-                    { startTime: ringtoneRange.startTime, endTime: ringtoneRange.endTime }
+                    trimSettings
                   );
                   
                   if (preparedFile) {
-                    const result = await setAsRingtone(preparedFile, currentTrack.title);
+                    const result = await setAsRingtone(preparedFile, currentTrack.title, trimSettings);
+                    
+                    // Show detailed message with trim info
+                    const trimInfo = getTrimInfoMessage(trimSettings);
                     Alert.alert(
                       result.success ? 'Success' : 'Note',
-                      result.message
+                      result.success 
+                        ? `Audio shared successfully!\n\n${trimInfo}\n\nUse your device's file manager to set it as ringtone.`
+                        : result.message
                     );
                   } else {
                     Alert.alert('Error', 'Failed to prepare audio file');
