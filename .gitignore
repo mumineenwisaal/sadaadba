@@ -84,3 +84,7 @@ react-native-project.zip
 *.env
 *.env.*
 my-react-native-project.zip
+-e 
+# Environment files
+*.env
+*.env.*
