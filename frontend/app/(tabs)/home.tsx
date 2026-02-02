@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   premiumBadge: {
     backgroundColor: 'rgba(201, 169, 97, 0.2)',
   },
-  notificationBtn: {
+  headerIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
