@@ -319,6 +319,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cached = await AsyncStorage.getItem(STORAGE_KEYS.INSTRUMENTALS);
       if (cached) {
         let instrumentals = JSON.parse(cached);
+        
+        // Extract unique moods from cached data
+        const uniqueMoods = [...new Set(instrumentals.map((i: Instrumental) => i.mood))] as string[];
+        const sortedMoods = ['All', ...uniqueMoods.sort()];
+        set({ moods: sortedMoods });
+        
         if (mood && mood !== 'All') {
           instrumentals = instrumentals.filter((i: Instrumental) => i.mood === mood);
         }
@@ -340,9 +346,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       const response = await axios.get(`${API_BASE}/api/instrumentals`, { params });
       set({ instrumentals: response.data });
       
-      // Cache instrumentals locally
+      // Cache instrumentals locally and extract moods when fetching all
       if (!mood && !search) {
         await AsyncStorage.setItem(STORAGE_KEYS.INSTRUMENTALS, JSON.stringify(response.data));
+        
+        // Extract unique moods dynamically from the data
+        const uniqueMoods = [...new Set(response.data.map((i: Instrumental) => i.mood))] as string[];
+        const sortedMoods = ['All', ...uniqueMoods.sort()];
+        set({ moods: sortedMoods });
       }
     } catch (error) {
       console.error('Failed to fetch instrumentals:', error);
