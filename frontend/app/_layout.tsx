@@ -3,8 +3,14 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { notificationService } from '../services/notificationService';
 
 export default function RootLayout() {
+  // Initialize OneSignal notifications
+  useEffect(() => {
+    notificationService.initialize();
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <StatusBar style="light" />
@@ -29,6 +35,30 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             animation: 'slide_from_bottom',
+          }} 
+        />
+        <Stack.Screen 
+          name="menu" 
+          options={{ 
+            animation: 'slide_from_right',
+          }} 
+        />
+        <Stack.Screen 
+          name="notifications" 
+          options={{ 
+            animation: 'slide_from_right',
+          }} 
+        />
+        <Stack.Screen 
+          name="help" 
+          options={{ 
+            animation: 'slide_from_right',
+          }} 
+        />
+        <Stack.Screen 
+          name="request-instrumental" 
+          options={{ 
+            animation: 'slide_from_right',
           }} 
         />
       </Stack>
