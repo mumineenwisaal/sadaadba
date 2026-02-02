@@ -54,6 +54,12 @@
         {
           "microphonePermission": "This app does not require microphone access."
         }
+      ],
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "development"
+        }
       ]
     ],
     "experiments": {
