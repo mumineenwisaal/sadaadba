@@ -388,7 +388,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   playTrack: async (track: Instrumental, queue?: Instrumental[]) => {
-    const { downloadedTracks, instrumentals, isSubscribed, isOnline, isPlayerReady } = get();
+    const { downloadedTracks, instrumentals, isSubscribed, isOnline } = get();
     
     // Check if track can be played
     const isDownloaded = !!downloadedTracks[track.id];
@@ -411,17 +411,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         axios.post(`${API_BASE}/api/instrumentals/${track.id}/play`).catch(() => {});
       }
       
-      // Use expo-av for audio playback on all platforms
-      const { Audio } = await import('expo-av');
-      
-      // Configure audio mode for background playback (lock screen controls)
-      await Audio.setAudioModeAsync({
-        staysActiveInBackground: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
-      
       // Get audio URL (local if downloaded, otherwise remote)
       let audioUri = track.audio_url;
       const downloaded = downloadedTracks[track.id];
@@ -434,38 +423,31 @@ export const useAppStore = create<AppState>((set, get) => ({
         return;
       }
       
-      // Unload previous sound if exists
-      const prevState = get() as any;
-      if (prevState._webSound) {
-        await prevState._webSound.unloadAsync();
-      }
+      // Use the new audio player service
+      const audioPlayerService = await import('../services/audioPlayerService');
       
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
-        { shouldPlay: true, progressUpdateIntervalMillis: 500 },
-        (status: any) => {
-          if (status.isLoaded) {
-            set({ 
-              playbackPosition: status.positionMillis,
-              playbackDuration: status.durationMillis || track.duration * 1000,
-              isPlaying: status.isPlaying,
-              isBuffering: status.isBuffering,
-            });
-            
-            if (status.didJustFinish) {
-              const { isLoopEnabled } = get();
-              if (isLoopEnabled) {
-                get().seekTo(0).then(() => get().resumeTrack());
-              } else {
-                get().playNext();
-              }
-            }
+      // Initialize audio if needed
+      await audioPlayerService.initializeAudio();
+      
+      // Play with status updates
+      await audioPlayerService.playAudio(audioUri, (status) => {
+        set({ 
+          playbackPosition: status.positionMillis,
+          playbackDuration: status.durationMillis || track.duration * 1000,
+          isPlaying: status.isPlaying,
+          isBuffering: status.isBuffering,
+        });
+        
+        if (status.didJustFinish) {
+          const { isLoopEnabled } = get();
+          if (isLoopEnabled) {
+            get().seekTo(0).then(() => get().resumeTrack());
+          } else {
+            get().playNext();
           }
         }
-      );
+      });
       
-      // Store sound reference
-      (set as any)({ _webSound: sound });
       set({ isPlaying: true, isBuffering: false });
       
     } catch (error) {
