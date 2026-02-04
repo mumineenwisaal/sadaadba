@@ -128,7 +128,8 @@ export default function SearchScreen() {
   );
 
   const renderTrackItem = ({ item }: { item: Instrumental }) => {
-    const hasPreview = item.is_premium && !isSubscribed && item.preview_start !== null && item.preview_end !== null;
+    // All premium tracks show preview for non-subscribed users
+    const hasPreview = item.is_premium && !isSubscribed;
     
     return (
       <TouchableOpacity style={styles.trackItem} onPress={() => handleTrackPress(item)} activeOpacity={0.8}>
