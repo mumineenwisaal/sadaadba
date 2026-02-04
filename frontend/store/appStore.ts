@@ -784,17 +784,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     return get().favoriteIds.includes(trackId);
   },
 
-  // Playlists (offline-first)
+  // Playlists (LOCAL-ONLY - persists on device until app uninstall)
   savePlaylistsLocally: async () => {
     const { playlists } = get();
-    await AsyncStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlists));
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlists));
+      console.log('Playlists saved locally:', playlists.length, 'playlists');
+    } catch (error) {
+      console.error('Failed to save playlists locally:', error);
+    }
   },
 
   loadPlaylistsLocally: async () => {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.PLAYLISTS);
       if (data) {
-        set({ playlists: JSON.parse(data) });
+        const parsed = JSON.parse(data);
+        set({ playlists: parsed });
+        console.log('Playlists loaded from local storage:', parsed.length, 'playlists');
       }
     } catch (error) {
       console.error('Failed to load playlists locally:', error);
@@ -802,32 +809,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchPlaylists: async () => {
-    const { user, isOnline } = get();
-    
-    if (!isOnline || !user) {
-      return;
-    }
-    
-    try {
-      const response = await axios.get(`${API_BASE}/api/playlists/${user.id}`);
-      set({ playlists: response.data });
-      await get().savePlaylistsLocally();
-    } catch (error) {
-      console.error('Failed to fetch playlists:', error);
-    }
+    // Playlists are now LOCAL-ONLY - no server sync
+    // Just ensure local data is loaded
+    await get().loadPlaylistsLocally();
   },
 
   createPlaylist: async (name: string, description?: string) => {
-    const { user, playlists, isOnline } = get();
+    const { playlists } = get();
     
-    // Create local playlist
+    // Generate playlist colors
+    const colors = ['#4A3463', '#2E5A4A', '#5A3A2E', '#2E4A5A', '#5A2E4A', '#4A5A2E'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    // Create local playlist (LOCAL-ONLY)
     const newPlaylist: Playlist = {
-      id: `local_${Date.now()}`,
-      user_id: user?.id || 'local',
+      id: `playlist_${Date.now()}`,
+      user_id: 'local',
       name,
       description: description || '',
       track_ids: [],
-      cover_color: '#4A3463',
+      cover_color: randomColor,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -835,119 +836,66 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ playlists: [...playlists, newPlaylist] });
     await get().savePlaylistsLocally();
     
-    // Sync with server if online
-    if (isOnline && user) {
-      try {
-        const response = await axios.post(`${API_BASE}/api/playlists`, {
-          user_id: user.id,
-          name,
-          description: description || '',
-        });
-        
-        // Replace local playlist with server version
-        const serverPlaylist = response.data;
-        set({ 
-          playlists: get().playlists.map(p => 
-            p.id === newPlaylist.id ? serverPlaylist : p
-          )
-        });
-        await get().savePlaylistsLocally();
-        return serverPlaylist;
-      } catch (error) {
-        console.error('Failed to sync playlist with server:', error);
-      }
-    }
-    
     return newPlaylist;
   },
 
   deletePlaylist: async (playlistId: string) => {
-    const { playlists, isOnline } = get();
+    const { playlists } = get();
     
-    // Remove locally immediately
+    // Remove locally (LOCAL-ONLY)
     set({ playlists: playlists.filter(p => p.id !== playlistId) });
     await get().savePlaylistsLocally();
-    
-    // Sync with server if online
-    if (isOnline && !playlistId.startsWith('local_')) {
-      try {
-        await axios.delete(`${API_BASE}/api/playlists/${playlistId}`);
-      } catch (error) {
-        console.error('Failed to delete playlist from server:', error);
-      }
-    }
     
     return true;
   },
 
   addToPlaylist: async (playlistId: string, trackId: string) => {
-    const { playlists, isOnline } = get();
+    const { playlists } = get();
     
-    // Update locally immediately
+    // Update locally (LOCAL-ONLY)
     set({
       playlists: playlists.map(p => 
         p.id === playlistId 
-          ? { ...p, track_ids: [...new Set([...p.track_ids, trackId])] }
+          ? { ...p, track_ids: [...new Set([...p.track_ids, trackId])], updated_at: new Date().toISOString() }
           : p
       )
     });
     await get().savePlaylistsLocally();
-    
-    // Sync with server if online
-    if (isOnline && !playlistId.startsWith('local_')) {
-      try {
-        await axios.post(`${API_BASE}/api/playlists/${playlistId}/tracks/${trackId}`);
-      } catch (error) {
-        console.error('Failed to add to playlist on server:', error);
-      }
-    }
     
     return true;
   },
 
   removeFromPlaylist: async (playlistId: string, trackId: string) => {
-    const { playlists, isOnline } = get();
+    const { playlists } = get();
     
-    // Update locally immediately
+    // Update locally (LOCAL-ONLY)
     set({
       playlists: playlists.map(p => 
         p.id === playlistId 
-          ? { ...p, track_ids: p.track_ids.filter(id => id !== trackId) }
+          ? { ...p, track_ids: p.track_ids.filter(id => id !== trackId), updated_at: new Date().toISOString() }
           : p
       )
     });
     await get().savePlaylistsLocally();
     
-    // Sync with server if online
-    if (isOnline && !playlistId.startsWith('local_')) {
-      try {
-        await axios.delete(`${API_BASE}/api/playlists/${playlistId}/tracks/${trackId}`);
-      } catch (error) {
-        console.error('Failed to remove from playlist on server:', error);
-      }
-    }
-    
     return true;
   },
 
   getPlaylistTracks: async (playlistId: string) => {
-    const { playlists, instrumentals, isOnline } = get();
+    const { playlists, instrumentals, downloadedTracks } = get();
     const playlist = playlists.find(p => p.id === playlistId);
     
     if (!playlist) return [];
     
-    // Get tracks from local instrumentals cache
-    const tracks = playlist.track_ids
-      .map(id => instrumentals.find(i => i.id === id))
-      .filter((t): t is Instrumental => t !== undefined);
-    
-    // If online and not a local playlist, try to fetch from server
-    if (isOnline && !playlistId.startsWith('local_')) {
-      try {
-        const response = await axios.get(`${API_BASE}/api/playlists/detail/${playlistId}`);
-        return response.data.tracks;
-      } catch (error) {
-        console.error('Failed to get playlist tracks from server:', error);
+    // Get tracks from local instrumentals cache or downloaded tracks metadata
+    const tracks: Instrumental[] = [];
+    for (const id of playlist.track_ids) {
+      let track = instrumentals.find(i => i.id === id);
+      if (!track && downloadedTracks[id]?.trackMetadata) {
+        track = downloadedTracks[id].trackMetadata;
+      }
+      if (track) {
+        tracks.push(track);
       }
     }
     
