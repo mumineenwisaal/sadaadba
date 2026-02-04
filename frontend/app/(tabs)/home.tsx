@@ -368,7 +368,8 @@ export default function HomeScreen() {
 
   const renderTrackCard = (track: Instrumental, index: number) => {
     const downloaded = isTrackDownloaded(track.id);
-    const hasPreview = track.is_premium && !isSubscribed && track.preview_start !== null && track.preview_end !== null;
+    // All premium tracks show preview for non-subscribed users
+    const hasPreview = track.is_premium && !isSubscribed;
     
     return (
       <TouchableOpacity
