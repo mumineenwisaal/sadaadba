@@ -194,12 +194,20 @@ export default function HomeScreen() {
     }
     
     if (track.is_premium && !isSubscribed) {
-      if (track.preview_start !== null && track.preview_end !== null) {
-        await playPreview(track);
-        router.push('/preview');
-      } else {
-        router.push('/subscription');
-      }
+      // Allow preview for premium tracks - use defaults if preview times not set
+      // Default: preview from 0 to 30 seconds (or track duration if shorter)
+      const hasExplicitPreview = track.preview_start !== null && track.preview_end !== null;
+      const defaultPreviewEnd = Math.min(30, track.duration); // 30 seconds or track duration
+      
+      // Create track with preview times (use explicit values or defaults)
+      const trackWithPreview = {
+        ...track,
+        preview_start: track.preview_start ?? 0,
+        preview_end: track.preview_end ?? defaultPreviewEnd,
+      };
+      
+      await playPreview(trackWithPreview);
+      router.push('/preview');
     } else {
       await playTrack(track);
       router.push('/player');
