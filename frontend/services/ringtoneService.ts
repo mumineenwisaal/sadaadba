@@ -1,8 +1,9 @@
-// Ringtone Service - Handles ringtone trimming and setting
-import { Platform, Alert, Linking, PermissionsAndroid } from 'react-native';
+// Ringtone Service - Handles audio trimming and sharing for ringtones
+// Uses expo-av to actually trim the audio by recording the trimmed portion
+import { Platform, Alert, PermissionsAndroid } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 
 export interface TrimSettings {
   startTime: number; // in milliseconds
@@ -21,8 +22,6 @@ export const requestRingtonePermission = async (): Promise<boolean> => {
   }
 
   try {
-    // For Android 6.0+, we need WRITE_SETTINGS permission
-    // This requires user to manually enable in settings
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
       {
@@ -41,40 +40,198 @@ export const requestRingtonePermission = async (): Promise<boolean> => {
   }
 };
 
-// Trim audio by recording playback segment
-// Since we can't directly trim MP3 in React Native without native modules,
-// we'll download the full file and add metadata about the trim region
-// The sharing dialog will share the full file with instructions
+// Actually trim the audio by recording the playback of the trimmed section
+export const trimAudioFile = async (
+  sourceUri: string,
+  trimSettings: TrimSettings,
+  onProgress?: (progress: number) => void
+): Promise<string | null> => {
+  let sound: Audio.Sound | null = null;
+  let recording: Audio.Recording | null = null;
+  
+  try {
+    const trimDuration = trimSettings.endTime - trimSettings.startTime;
+    
+    // Configure audio for recording
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+      shouldDuckAndroid: false,
+      playThroughEarpieceAndroid: false,
+    });
+    
+    // Prepare recording
+    recording = new Audio.Recording();
+    await recording.prepareToRecordAsync({
+      isMeteringEnabled: false,
+      android: {
+        extension: '.m4a',
+        outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+        audioEncoder: Audio.AndroidAudioEncoder.AAC,
+        sampleRate: 44100,
+        numberOfChannels: 2,
+        bitRate: 128000,
+      },
+      ios: {
+        extension: '.m4a',
+        outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+        audioQuality: Audio.IOSAudioQuality.HIGH,
+        sampleRate: 44100,
+        numberOfChannels: 2,
+        bitRate: 128000,
+      },
+      web: {
+        mimeType: 'audio/webm',
+        bitsPerSecond: 128000,
+      },
+    });
+    
+    // Load the source audio
+    const { sound: loadedSound } = await Audio.Sound.createAsync(
+      { uri: sourceUri },
+      { positionMillis: trimSettings.startTime, shouldPlay: false }
+    );
+    sound = loadedSound;
+    
+    // Start recording
+    await recording.startAsync();
+    
+    // Play the source audio from start position
+    await sound.playAsync();
+    
+    // Monitor progress and stop at end time
+    const checkInterval = 100; // Check every 100ms
+    let elapsed = 0;
+    
+    while (elapsed < trimDuration) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      elapsed += checkInterval;
+      
+      // Report progress
+      if (onProgress) {
+        onProgress(Math.min(elapsed / trimDuration, 1));
+      }
+      
+      // Check if sound is still playing
+      const status = await sound.getStatusAsync();
+      if (!status.isLoaded || !status.isPlaying) {
+        break;
+      }
+      
+      // Check if we've reached the end position
+      if (status.positionMillis >= trimSettings.endTime) {
+        break;
+      }
+    }
+    
+    // Stop playback and recording
+    await sound.stopAsync();
+    await recording.stopAndUnloadAsync();
+    
+    // Get the recorded file URI
+    const recordedUri = recording.getURI();
+    
+    // Clean up
+    await sound.unloadAsync();
+    
+    // Reset audio mode
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+      interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    });
+    
+    return recordedUri;
+  } catch (error) {
+    console.error('Error trimming audio:', error);
+    
+    // Clean up on error
+    if (sound) {
+      try { await sound.unloadAsync(); } catch (e) {}
+    }
+    if (recording) {
+      try { await recording.stopAndUnloadAsync(); } catch (e) {}
+    }
+    
+    // Reset audio mode
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (e) {}
+    
+    return null;
+  }
+};
+
+// Alternative: Extract portion by downloading and creating a trimmed file
+// This creates a file with only the specified portion (simulated trim via metadata)
 export const prepareAudioForRingtone = async (
   audioUrl: string,
   trackId: string,
   trackTitle: string,
-  trimSettings: TrimSettings
+  trimSettings: TrimSettings,
+  onProgress?: (progress: number) => void
 ): Promise<string | null> => {
   try {
-    const fileName = `ringtone_${trackId}_${Date.now()}.mp3`;
-    const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-
-    // Check if it's a local file or needs downloading
-    if (audioUrl.startsWith('file://') || audioUrl.startsWith(FileSystem.documentDirectory || '')) {
-      // Already local, just copy
-      await FileSystem.copyAsync({
-        from: audioUrl,
-        to: fileUri,
-      });
-    } else {
-      // Download the file
-      const downloadResult = await FileSystem.downloadAsync(audioUrl, fileUri);
+    // First, download or locate the source file
+    let sourceUri = audioUrl;
+    
+    // If it's a remote URL, download it first
+    if (!audioUrl.startsWith('file://') && !audioUrl.startsWith(FileSystem.documentDirectory || '')) {
+      onProgress?.(0.1);
+      const tempFile = `${FileSystem.cacheDirectory}temp_${trackId}_${Date.now()}.mp3`;
+      const downloadResult = await FileSystem.downloadAsync(audioUrl, tempFile);
       if (downloadResult.status !== 200) {
         throw new Error('Failed to download audio file');
       }
+      sourceUri = tempFile;
+      onProgress?.(0.3);
     }
-
-    // Note: Real audio trimming requires native code or FFmpeg
-    // For a complete solution, we would need expo-dev-client with a native module
-    // For now, we provide the full file with trim info in the share message
-
-    return fileUri;
+    
+    // Now trim the audio by recording the playback
+    onProgress?.(0.4);
+    const trimmedUri = await trimAudioFile(sourceUri, trimSettings, (trimProgress) => {
+      // Map trim progress to 40-90% of total progress
+      onProgress?.(0.4 + (trimProgress * 0.5));
+    });
+    
+    if (!trimmedUri) {
+      throw new Error('Failed to trim audio');
+    }
+    
+    // Move to a permanent location with proper name
+    const finalFileName = `ringtone_${trackId}_${Date.now()}.m4a`;
+    const finalUri = `${FileSystem.documentDirectory}${finalFileName}`;
+    
+    await FileSystem.moveAsync({
+      from: trimmedUri,
+      to: finalUri,
+    });
+    
+    onProgress?.(1);
+    
+    // Clean up temp file if we downloaded one
+    if (sourceUri.includes('temp_')) {
+      try {
+        await FileSystem.deleteAsync(sourceUri, { idempotent: true });
+      } catch (e) {}
+    }
+    
+    return finalUri;
   } catch (error) {
     console.error('Error preparing audio for ringtone:', error);
     return null;
@@ -87,10 +244,10 @@ export const getTrimInfoMessage = (trimSettings: TrimSettings): string => {
   const endFormatted = formatDuration(trimSettings.endTime);
   const durationFormatted = formatDuration(trimSettings.endTime - trimSettings.startTime);
   
-  return `Use ${startFormatted} to ${endFormatted} (${durationFormatted}) as your ringtone portion.`;
+  return `Trimmed: ${startFormatted} to ${endFormatted} (${durationFormatted})`;
 };
 
-// Set as ringtone on Android
+// Set as ringtone on Android (share the trimmed file)
 export const setAsRingtone = async (
   fileUri: string,
   title: string,
@@ -104,18 +261,16 @@ export const setAsRingtone = async (
   }
 
   try {
-    // On Android, we need to use native modules or share the file
-    // For Expo managed workflow, we'll use sharing to let user save to ringtones
     const isAvailable = await Sharing.isAvailableAsync();
     
     if (isAvailable) {
       await Sharing.shareAsync(fileUri, {
-        mimeType: 'audio/mpeg',
+        mimeType: 'audio/m4a',
         dialogTitle: `Save "${title}" as Ringtone`,
-        UTI: 'public.mp3',
+        UTI: 'public.mpeg-4-audio',
       });
       
-      let message = 'Audio file shared. Use your device\'s file manager to set it as ringtone.';
+      let message = 'Trimmed audio file shared! Use your file manager to set it as ringtone.';
       if (trimSettings) {
         message += `\n\n${getTrimInfoMessage(trimSettings)}`;
       }
@@ -134,7 +289,7 @@ export const setAsRingtone = async (
     console.error('Error setting ringtone:', error);
     return {
       success: false,
-      message: 'Failed to set ringtone. Please try again.',
+      message: 'Failed to share ringtone. Please try again.',
     };
   }
 };
@@ -152,7 +307,7 @@ export const showIOSRingtoneInstructions = () => {
     'Would you like to download this audio?',
     [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Download', onPress: () => {} }, // Will be handled by caller
+      { text: 'Download', onPress: () => {} },
     ]
   );
 };
