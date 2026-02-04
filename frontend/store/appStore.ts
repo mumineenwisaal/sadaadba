@@ -946,13 +946,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {}
   },
 
-  // Downloads
+  // Downloads (LOCAL-ONLY - persists on device until app uninstall)
   loadDownloadedTracks: async () => {
     try {
+      // First try to load from AsyncStorage (always available)
+      const cached = await AsyncStorage.getItem(STORAGE_KEYS.DOWNLOADED_TRACKS);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        set({ downloadedTracks: parsed });
+        console.log('Downloaded tracks loaded from storage:', Object.keys(parsed).length, 'tracks');
+      }
+      
+      // On native, also verify from audio service
       const downloaded = await audioService.getDownloadedTracks();
-      set({ downloadedTracks: downloaded });
-      // Also save to local storage for reference
-      await AsyncStorage.setItem(STORAGE_KEYS.DOWNLOADED_TRACKS, JSON.stringify(downloaded));
+      if (Object.keys(downloaded).length > 0) {
+        // Merge with existing metadata from cache
+        const current = get().downloadedTracks;
+        const merged: Record<string, DownloadedTrackWithMetadata> = {};
+        
+        for (const [id, track] of Object.entries(downloaded)) {
+          merged[id] = {
+            ...track,
+            trackMetadata: current[id]?.trackMetadata || track.trackMetadata
+          };
+        }
+        
+        set({ downloadedTracks: merged });
+        // Save merged data
+        await AsyncStorage.setItem(STORAGE_KEYS.DOWNLOADED_TRACKS, JSON.stringify(merged));
+        console.log('Downloaded tracks verified from file system:', Object.keys(merged).length, 'tracks');
+      }
     } catch (error) {
       console.error('Failed to load downloaded tracks:', error);
       // Try to load from async storage backup
