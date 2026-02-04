@@ -635,14 +635,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   stopPlayback: async () => {
-    const state = get() as any;
-    if (state._webSound) {
-      try {
-        await state._webSound.stopAsync();
-        await state._webSound.unloadAsync();
-      } catch (e) {
-        console.log('Error stopping playback:', e);
-      }
+    try {
+      const audioPlayerService = await import('../services/audioPlayerService');
+      await audioPlayerService.stopAudio();
+    } catch (e) {
+      console.log('Error stopping playback:', e);
     }
     set({ 
       currentTrack: null, 
@@ -652,7 +649,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       queue: [],
       queueIndex: 0,
       playbackError: null,
-      _webSound: null,
     });
   },
 
