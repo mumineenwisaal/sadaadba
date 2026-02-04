@@ -719,10 +719,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentTrack: track });
   },
 
-  // Favorites (offline-first)
+  // Favorites (LOCAL-ONLY - persists on device until app uninstall)
   saveFavoritesLocally: async () => {
     const { favoriteIds, favorites } = get();
-    await AsyncStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify({ ids: favoriteIds, tracks: favorites }));
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify({ ids: favoriteIds, tracks: favorites }));
+      console.log('Favorites saved locally:', favoriteIds.length, 'tracks');
+    } catch (error) {
+      console.error('Failed to save favorites locally:', error);
+    }
   },
 
   loadFavoritesLocally: async () => {
@@ -730,7 +735,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const data = await AsyncStorage.getItem(STORAGE_KEYS.FAVORITES);
       if (data) {
         const parsed = JSON.parse(data);
-        set({ favoriteIds: parsed.ids || [], favorites: parsed.tracks || [] });
+        const ids = parsed.ids || [];
+        const tracks = parsed.tracks || [];
+        set({ favoriteIds: ids, favorites: tracks });
+        console.log('Favorites loaded from local storage:', ids.length, 'tracks');
       }
     } catch (error) {
       console.error('Failed to load favorites locally:', error);
@@ -738,39 +746,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchFavorites: async () => {
-    const { user, isOnline } = get();
-    
-    if (!isOnline || !user) {
-      // Use locally stored favorites when offline
-      return;
-    }
-    
-    try {
-      const response = await axios.get(`${API_BASE}/api/favorites/${user.id}`);
-      const tracks = response.data;
-      const ids = tracks.map((t: Instrumental) => t.id);
-      set({ favorites: tracks, favoriteIds: ids });
-      
-      // Save to local storage
-      await get().saveFavoritesLocally();
-    } catch (error) {
-      console.error('Failed to fetch favorites:', error);
-    }
+    // Favorites are now LOCAL-ONLY - no server sync
+    // Just ensure local data is loaded
+    await get().loadFavoritesLocally();
   },
 
   toggleFavorite: async (trackId: string) => {
-    const { user, favorites, favoriteIds, instrumentals, isOnline } = get();
+    const { favorites, favoriteIds, instrumentals, downloadedTracks } = get();
     
     const isFav = favoriteIds.includes(trackId);
     
-    // Update local state immediately (optimistic update)
+    // Update local state immediately
     if (isFav) {
       set({ 
         favoriteIds: favoriteIds.filter(id => id !== trackId),
         favorites: favorites.filter(f => f.id !== trackId) 
       });
     } else {
-      const track = instrumentals.find(i => i.id === trackId);
+      // Find track from instrumentals or downloaded tracks metadata
+      let track = instrumentals.find(i => i.id === trackId);
+      if (!track && downloadedTracks[trackId]?.trackMetadata) {
+        track = downloadedTracks[trackId].trackMetadata;
+      }
       if (track) {
         set({ 
           favoriteIds: [...favoriteIds, trackId],
@@ -779,21 +776,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     }
     
-    // Save locally immediately
+    // Save to local storage immediately (persists until app uninstall)
     await get().saveFavoritesLocally();
-    
-    // Sync with server if online
-    if (isOnline && user) {
-      try {
-        if (isFav) {
-          await axios.delete(`${API_BASE}/api/favorites/${user.id}/${trackId}`);
-        } else {
-          await axios.post(`${API_BASE}/api/favorites/${user.id}/${trackId}`);
-        }
-      } catch (error) {
-        console.error('Failed to sync favorite with server:', error);
-      }
-    }
   },
 
   isFavorite: (trackId: string) => {
