@@ -128,6 +128,55 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
+  // Auto-slide effect for featured carousel
+  useEffect(() => {
+    if (featuredInstrumentals.length <= 1) return;
+    
+    const startAutoSlide = () => {
+      autoSlideTimer.current = setInterval(() => {
+        setCurrentFeaturedIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % featuredInstrumentals.length;
+          featuredCarouselRef.current?.scrollToIndex({
+            index: nextIndex,
+            animated: true,
+          });
+          return nextIndex;
+        });
+      }, AUTO_SLIDE_INTERVAL);
+    };
+    
+    startAutoSlide();
+    
+    return () => {
+      if (autoSlideTimer.current) {
+        clearInterval(autoSlideTimer.current);
+      }
+    };
+  }, [featuredInstrumentals.length]);
+
+  // Handle manual scroll
+  const handleCarouselScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / CAROUSEL_WIDTH);
+    if (index !== currentFeaturedIndex && index >= 0 && index < featuredInstrumentals.length) {
+      setCurrentFeaturedIndex(index);
+      // Reset auto-slide timer when user manually scrolls
+      if (autoSlideTimer.current) {
+        clearInterval(autoSlideTimer.current);
+        autoSlideTimer.current = setInterval(() => {
+          setCurrentFeaturedIndex((prevIndex) => {
+            const nextIndex = (prevIndex + 1) % featuredInstrumentals.length;
+            featuredCarouselRef.current?.scrollToIndex({
+              index: nextIndex,
+              animated: true,
+            });
+            return nextIndex;
+          });
+        }, AUTO_SLIDE_INTERVAL);
+      }
+    }
+  }, [currentFeaturedIndex, featuredInstrumentals.length, CAROUSEL_WIDTH]);
+
   const onRefresh = useCallback(async () => {
     if (!isOnline) return;
     setRefreshing(true);
