@@ -512,25 +512,34 @@ export const useAppStore = create<AppState>((set, get) => ({
       await audioPlayerService.initializeAudio();
       
       // Play with status updates, starting from preview start position
-      await audioPlayerService.playAudio(audioUri, (status) => {
-        const { isPreviewMode, previewEndTime } = get();
-        
-        set({ 
-          playbackPosition: status.positionMillis,
-          playbackDuration: status.durationMillis || track.duration * 1000,
-          isPlaying: status.isPlaying,
-          isBuffering: status.isBuffering,
-        });
-        
-        // Stop at preview end time
-        if (isPreviewMode && status.positionMillis >= previewEndTime) {
-          get().stopPreview();
+      await audioPlayerService.playAudio(
+        audioUri, 
+        (status) => {
+          const { isPreviewMode, previewEndTime } = get();
+          
+          set({ 
+            playbackPosition: status.positionMillis,
+            playbackDuration: status.durationMillis || track.duration * 1000,
+            isPlaying: status.isPlaying,
+            isBuffering: status.isBuffering,
+          });
+          
+          // Stop at preview end time
+          if (isPreviewMode && status.positionMillis >= previewEndTime) {
+            get().stopPreview();
+          }
+          
+          if (status.didJustFinish) {
+            get().stopPreview();
+          }
+        }, 
+        previewStart,
+        {
+          id: track.id,
+          title: `${track.title} (Preview)`,
+          artist: `${track.mood} • Sadaa Instrumentals`,
         }
-        
-        if (status.didJustFinish) {
-          get().stopPreview();
-        }
-      }, previewStart);
+      );
       
       set({ isPlaying: true, isBuffering: false });
       
